@@ -2,6 +2,10 @@
 
 import { useMemo, useState } from "react";
 import AppShell from "@/components/app-shell";
+import Link from "next/link";
+
+// Stable mock today for demo (deterministic across server/client)
+const MOCK_TODAY = '2026-06-01';
 
 type RequestOption = "1シフト" | "2シフト" | "通しシフト" | "休み希望";
 
@@ -22,17 +26,20 @@ function formatKey(date: Date) {
 }
 
 function jpDateLabel(date: Date) {
-  return date.toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" });
+  return `${date.getMonth() + 1}月${date.getDate()}日`;
 }
 
 function jpWeekday(date: Date) {
-  return date.toLocaleDateString("ja-JP", { weekday: "short" });
+  const wk = ["日", "月", "火", "水", "木", "金", "土"];
+  return wk[date.getDay()];
 }
 
 export default function RequestsPage() {
   // target month start (mock)
   const monthStart = useMemo(() => new Date(2026, 5, 1), []); // June 2026 (month index 5)
   const dates = useMemo(() => generateDates(monthStart, 14), [monthStart]);
+  // use stable mock today key to avoid server/client mismatch
+  const todayKey = MOCK_TODAY;
 
   // requests stored as map dateKey -> RequestOption | null
   const [requests, setRequests] = useState<Record<string, RequestOption | null>>({});
@@ -93,6 +100,22 @@ export default function RequestsPage() {
           </div>
         </header>
 
+        {/* Vacation secondary action */}
+        <section className="rounded-2xl bg-amber-50 p-4 shadow-sm border border-amber-100">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-slate-900">休暇希望</p>
+              <p className="mt-1 text-sm text-slate-600">年間の休暇希望を入力できます</p>
+            </div>
+            <Link
+              href="/vacations"
+              className="rounded-3xl bg-green-700 px-4 py-3 text-sm font-semibold text-white shadow-sm shadow-green-200"
+            >
+              休暇希望を入力する
+            </Link>
+          </div>
+        </section>
+
         {/* Month Card */}
         <div className="rounded-2xl bg-white p-4 shadow-sm border border-slate-100">
           <div className="flex items-center justify-between">
@@ -117,19 +140,29 @@ export default function RequestsPage() {
               const key = formatKey(d);
               const req = requests[key] ?? null;
               const isRequested = !!req;
+              const isToday = key === todayKey;
               return (
                 <button
                   key={key}
                   onClick={() => openForDate(d)}
                   className={`rounded-xl p-3 text-left shadow-sm transition ${
-                    isRequested
-                      ? 'bg-amber-50 border border-amber-200'
-                      : 'bg-white border border-slate-100'
+                    isToday
+                      ? 'border-2 border-amber-400 bg-amber-50'
+                      : isRequested
+                        ? 'bg-amber-50 border border-amber-200'
+                        : 'bg-white border border-slate-100'
                   }`}
                 >
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-2">
                     <div>
-                      <div className="text-sm font-semibold text-slate-800">{d.getDate()}日</div>
+                      <div className="flex items-center gap-2">
+                        <div className="text-sm font-semibold text-slate-800">{d.getDate()}日</div>
+                        {isToday && (
+                          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-900">
+                            今日
+                          </span>
+                        )}
+                      </div>
                       <div className="text-xs text-slate-500 mt-1">{jpWeekday(d)}</div>
                     </div>
                     <div className="text-xs text-slate-600">{req ?? '未選択'}</div>

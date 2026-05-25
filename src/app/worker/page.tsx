@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import AppShell from '@/components/app-shell';
+import Link from 'next/link';
 
 type ViewMode = 'self' | 'all';
 
@@ -36,6 +37,20 @@ const mockShifts = {
   '2025-06-05': { type: '2シフト', time: '13:00–17:30', workers: ['TK', 'IY'] },
   '2025-06-06': { type: '休み', time: '—', workers: [] },
   '2025-06-07': { type: '1シフト', time: '08:30–13:00', workers: ['YH', 'ST', 'TK'] },
+  '2025-06-08': { type: '2シフト', time: '13:00–17:30', workers: ['SH', 'IY'] },
+  '2025-06-09': { type: '通しシフト', time: '08:30–17:30', workers: ['TJ', 'ST'] },
+  '2025-06-10': { type: '休み', time: '—', workers: [] },
+  '2025-06-11': { type: '1シフト', time: '08:30–13:00', workers: ['YH', 'SH'] },
+  '2025-06-12': { type: '2シフト', time: '13:00–17:30', workers: ['TK', 'IY'] },
+  '2025-06-13': { type: '休暇', time: '—', workers: [] },
+  '2025-06-14': { type: '1シフト', time: '08:30–13:00', workers: ['YH', 'TJ'] },
+  '2025-06-15': { type: '2シフト', time: '13:00–17:30', workers: ['SH', 'ST'] },
+  '2025-06-16': { type: '通しシフト', time: '08:30–17:30', workers: ['TK'] },
+  '2025-06-17': { type: '1シフト', time: '08:30–13:00', workers: ['YH', 'IY'] },
+  '2025-06-18': { type: '2シフト', time: '13:00–17:30', workers: ['ST', 'TJ'] },
+  '2025-06-19': { type: '休み', time: '—', workers: [] },
+  '2025-06-20': { type: '休暇', time: '—', workers: [] },
+  '2025-06-21': { type: '1シフト', time: '08:30–13:00', workers: ['YH', 'SH', 'TK'] },
 };
 
 function getShiftMarker(type: string): string {
@@ -89,53 +104,28 @@ export default function WorkerPage() {
 
   const today = new Date('2025-05-25');
   const startDate = new Date('2025-05-25');
-  const dates = generateDates(startDate, 14);
+  const dates = generateDates(startDate, 56);
+  const slides = Array.from({ length: 4 }, (_, index) => dates.slice(index * 14, index * 14 + 14));
 
-  const todayShift = mockShifts['2025-05-25'];
-  const selectedShift = mockShifts[selectedDate as keyof typeof mockShifts];
+  const selectedShift = mockShifts[selectedDate as keyof typeof mockShifts] ?? null;
 
   return (
     <AppShell>
       <div className="space-y-5 pb-4">
         {/* Header */}
-        <section className="rounded-3xl bg-gradient-to-br from-amber-50 to-orange-50 p-6 shadow-sm shadow-slate-200">
-          <h2 className="text-2xl font-semibold text-slate-900">スタッフ画面</h2>
-          <p className="mt-2 text-sm text-slate-600">今日のシフトと今後の予定を確認できます</p>
-          <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-white/80 px-4 py-2 shadow-sm">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-700 text-xs font-semibold text-white">
+        <section className="rounded-3xl bg-amber-50/90 p-5 shadow-sm shadow-slate-200">
+          <div>
+            <p className="text-sm font-semibold text-green-800">スタッフ画面</p>
+            <h1 className="mt-2 text-3xl font-semibold text-slate-900">今日の予定</h1>
+            <p className="mt-2 text-sm text-slate-600">選択した日のシフトとメンバーを確認できます</p>
+          </div>
+          <div className="mt-4 inline-flex items-center gap-3 rounded-full bg-white px-4 py-3 shadow-sm shadow-slate-200">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-700 text-sm font-semibold text-white">
               {mockEmployee.initials}
             </div>
-            <span className="text-sm font-medium text-slate-700">{mockEmployee.name}</span>
-          </div>
-        </section>
-
-        {/* Today's Shift */}
-        <section className="rounded-3xl bg-white p-6 shadow-sm shadow-slate-200">
-          <h3 className="text-lg font-semibold text-slate-900">今日のシフト</h3>
-          <div className="mt-3 space-y-2">
-            <p className="text-sm text-slate-500">5月25日（月）</p>
-            <div className="rounded-2xl bg-gradient-to-r from-green-50 to-emerald-50 p-4">
-              <p className="font-semibold text-green-900">{todayShift.type}</p>
-              <p className="text-sm text-green-700">{todayShift.time}</p>
-            </div>
-          </div>
-
-          {/* Workers Summary */}
-          <div className="mt-4 space-y-2 border-t border-slate-100 pt-4">
-            <p className="text-xs uppercase tracking-wider text-slate-500">本日のスタッフ</p>
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <span className="text-lg">①</span>
-                <span className="text-sm text-slate-600">山田, 佐藤, 田中</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-lg">②</span>
-                <span className="text-sm text-slate-600">鈴木, 高橋</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-lg">通</span>
-                <span className="text-sm text-slate-600">伊藤</span>
-              </div>
+            <div>
+              <p className="text-xs text-slate-500">従業員</p>
+              <p className="text-base font-semibold text-slate-900">{mockEmployee.name}</p>
             </div>
           </div>
         </section>
@@ -164,52 +154,72 @@ export default function WorkerPage() {
           </button>
         </div>
 
-        {/* 2-Week Shift Calendar */}
+        {/* 8-Week Shift Calendar */}
         <section>
-          <h3 className="mb-3 text-lg font-semibold text-slate-900">2週間シフト</h3>
-          <p className="mb-4 text-sm text-slate-500">今週と来週をまとめて確認できます</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold text-slate-900">8週間シフト</h3>
+              <p className="text-sm text-slate-500">2週間ずつ横にスクロールして確認できます</p>
+            </div>
+            <div className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-900">全56日</div>
+          </div>
 
-          <div className="grid grid-cols-7 gap-2">
-            {dates.map((date) => {
-              const dateStr = formatDate(date);
-              const shift = mockShifts[dateStr as keyof typeof mockShifts];
-              const isToday = dateStr === formatDate(today);
-              const isSelected = dateStr === selectedDate;
-              const dayOfWeek = getDayOfWeek(date);
-              const marker = shift ? getShiftMarker(shift.type) : '';
+          <div className="mt-4 overflow-x-auto snap-x snap-mandatory pb-3">
+            <div className="flex gap-3">
+              {slides.map((slide, slideIndex) => (
+                <div key={slideIndex} className="w-full flex-none snap-start">
+                  <div className="grid grid-cols-7 gap-2">
+                    {slide.map((date) => {
+                      const dateStr = formatDate(date);
+                      const shift = mockShifts[dateStr as keyof typeof mockShifts];
+                      const isToday = dateStr === formatDate(today);
+                      const isSelected = dateStr === selectedDate;
+                      const isTodaySelected = isToday && isSelected;
+                      const dayOfWeek = getDayOfWeek(date);
+                      const marker = shift ? getShiftMarker(shift.type) : '';
 
-              return (
-                <button
-                  key={dateStr}
-                  onClick={() => setSelectedDate(dateStr)}
-                  className={`rounded-2xl border-2 p-3 text-center transition ${
-                    isSelected
-                      ? 'border-green-700 bg-green-50 shadow-md'
-                      : isToday
-                        ? `border-amber-400 ${getShiftColor(shift?.type || '')} shadow-sm shadow-slate-200`
-                        : `border-slate-200 ${getShiftColor(shift?.type || '')} shadow-sm shadow-slate-200`
-                  }`}
-                >
-                  <p className={`text-xs font-semibold ${isSelected ? 'text-green-700' : 'text-slate-500'}`}>
-                    {dayOfWeek}
-                  </p>
-                  <p className={`mt-1 text-lg font-bold ${isSelected ? 'text-green-900' : 'text-slate-900'}`}>
-                    {date.getDate()}
-                  </p>
-                  {shift && (
-                    <div className="mt-2 space-y-1">
-                      <p className="text-sm font-semibold text-slate-700">{marker}</p>
-                      {shift.workers.length > 0 && (
-                        <p className="text-xs text-slate-600">
-                          {shift.workers.slice(0, 2).join(' ')}
-                          {shift.workers.length > 2 && ` +${shift.workers.length - 2}`}
-                        </p>
-                      )}
-                    </div>
-                  )}
-                </button>
-              );
-            })}
+                      const baseBg = shift?.type === '休み' ? 'bg-slate-100' : shift?.type === '休暇' ? 'bg-amber-50' : 'bg-white';
+                      const baseBorder = shift?.type === '休み' ? 'border-slate-200' : shift?.type === '休暇' ? 'border-amber-100' : 'border-slate-200';
+
+                      return (
+                        <button
+                          key={dateStr}
+                          onClick={() => setSelectedDate(dateStr)}
+                          className={`min-h-[86px] rounded-2xl border p-2 text-left transition ${
+                            isTodaySelected
+                              ? 'border-green-700 bg-emerald-100 ring-2 ring-amber-300'
+                              : isSelected
+                                ? 'border-green-700 bg-emerald-100'
+                                : isToday
+                                  ? `border-amber-400 bg-amber-50`
+                                  : `${baseBorder} ${baseBg}`
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-500">
+                              {dayOfWeek}
+                            </p>
+                            {isToday && <span className="h-2.5 w-2.5 rounded-full bg-amber-400" />}
+                          </div>
+                          <p className={`mt-1 text-base font-semibold ${isSelected ? 'text-green-900' : 'text-slate-900'}`}>
+                            {date.getDate()}
+                          </p>
+                          <p className="mt-2 text-sm font-semibold text-slate-700">{marker}</p>
+                          {shift?.workers.length ? (
+                            <p className="mt-2 text-[10px] leading-4 text-slate-600">
+                              {shift.workers.slice(0, 2).join(' ')}{shift.workers.length > 2 && ` +${shift.workers.length - 2}`}
+                            </p>
+                          ) : null}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="mt-3 rounded-2xl bg-slate-50 px-3 py-3 text-center text-sm text-slate-600">
+            ← 横にスクロール →
           </div>
         </section>
 
@@ -264,15 +274,12 @@ export default function WorkerPage() {
 
         {/* Quick Actions */}
         <section className="space-y-3">
-          <button className="w-full rounded-3xl bg-gradient-to-r from-green-700 to-green-800 px-6 py-4 font-semibold text-white shadow-sm shadow-slate-200 transition hover:shadow-md">
-            シフト希望を出す
-          </button>
-          <button className="w-full rounded-3xl bg-gradient-to-r from-amber-600 to-amber-700 px-6 py-4 font-semibold text-white shadow-sm shadow-slate-200 transition hover:shadow-md">
+          <Link
+            href="/overtime"
+            className="block rounded-3xl bg-gradient-to-r from-amber-600 to-amber-700 px-6 py-4 text-center text-base font-semibold text-white shadow-sm shadow-slate-200 transition hover:shadow-md"
+          >
             残業申請
-          </button>
-          <button className="w-full rounded-3xl bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 font-semibold text-white shadow-sm shadow-slate-200 transition hover:shadow-md">
-            レシピを見る
-          </button>
+          </Link>
         </section>
 
         {/* Footer */}
