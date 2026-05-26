@@ -125,29 +125,35 @@ export default function ManagerPage() {
           <h3 className="text-lg font-semibold text-slate-900">クイックアクション</h3>
           <div className="mt-3 grid grid-cols-2 md:grid-cols-3 gap-3">
             {quickActions.map((q) => {
-              const isAttendance = q.title === "勤務時間集計";
+              const href =
+                q.title === "シフトを編集"
+                  ? "/manager/shifts"
+                  : q.title === "勤務時間集計"
+                    ? "/manager/attendance"
+                    : null;
+              const canOpen = href !== null;
               const card = (
                 <div
                   className={`relative flex items-center justify-between gap-3 rounded-xl border bg-amber-50 p-4 shadow-sm ${
-                    isAttendance
+                    canOpen
                       ? "border-emerald-200 transition group-hover:border-emerald-400 group-hover:bg-emerald-50"
                       : "border-amber-100"
                   }`}
                 >
                   <div>
                     <div className="font-medium text-slate-800">{q.title}</div>
-                    <div className={`text-xs ${isAttendance ? "font-semibold text-emerald-700" : "text-slate-500"}`}>
-                      {isAttendance ? "開く →" : "準備中"}
+                    <div className={`text-xs ${canOpen ? "font-semibold text-emerald-700" : "text-slate-500"}`}>
+                      {canOpen ? "開く →" : "準備中"}
                     </div>
                   </div>
                   <div className="text-xs text-slate-400">›</div>
                 </div>
               );
 
-              return isAttendance ? (
+              return href ? (
                 <Link
                   key={q.title}
-                  href="/manager/attendance"
+                  href={href}
                   className="group block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2"
                 >
                   {card}
