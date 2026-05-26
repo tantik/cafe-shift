@@ -53,4 +53,20 @@ export const shiftRequests = [
     status: "applied",
     createdAt: "2026-05-30T13:00:00Z",
   },
+  {
+    id: "req-007",
+    employeeId: "nakamura",
+    date: "2026-06-18",
+    shiftCode: "shift_2",
+    status: "pending",
+    createdAt: "2026-05-31T09:20:00Z",
+  },
+  {
+    id: "req-008",
+    employeeId: "kobayashi",
+    date: "2026-06-20",
+    shiftCode: "off",
+    status: "pending",
+    createdAt: "2026-05-31T09:25:00Z",
+  },
 ] satisfies ShiftRequest[];

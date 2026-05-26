@@ -39,25 +39,7 @@ function mapSharedRequest(request: typeof sharedShiftRequests[number]): ShiftReq
   };
 }
 
-const initialRequests: ShiftRequest[] = [
-  ...sharedShiftRequests.map(mapSharedRequest),
-  {
-    id: "req-local-007",
-    employee: "中村 蓮",
-    initials: "NR",
-    date: "2026年6月18日（木）",
-    shift: "2シフト",
-    status: "pending",
-  },
-  {
-    id: "req-local-008",
-    employee: "小林 杏",
-    initials: "KA",
-    date: "2026年6月20日（土）",
-    shift: "休み希望",
-    status: "pending",
-  },
-];
+const initialRequests: ShiftRequest[] = sharedShiftRequests.map(mapSharedRequest);
 
 const statusDetails: Record<RequestStatus, { label: string; badge: string }> = {
   pending: { label: "未確認", badge: "bg-amber-100 text-amber-800" },

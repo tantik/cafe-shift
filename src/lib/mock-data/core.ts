@@ -10,6 +10,8 @@ export const employees = [
   { id: "suzuki", name: "鈴木 愛", role: "worker", avatarLabel: "SA", isActive: true },
   { id: "ito", name: "伊藤 翔", role: "worker", avatarLabel: "IS", isActive: true },
   { id: "takahashi", name: "高橋 美咲", role: "worker", avatarLabel: "TM", isActive: false },
+  { id: "nakamura", name: "中村 蓮", role: "worker", avatarLabel: "NR", isActive: true },
+  { id: "kobayashi", name: "小林 杏", role: "worker", avatarLabel: "KA", isActive: true },
 ] satisfies Employee[];
 
 export const shiftTypes = [

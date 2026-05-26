@@ -31,18 +31,11 @@ type ShiftRequest = {
   comment?: string;
 };
 
-const coreEmployeeById = Object.fromEntries(coreEmployees.map((employee) => [employee.id, employee]));
-
-const employees: Employee[] = [
-  { id: "yamada", name: coreEmployeeById.yamada?.name ?? "山田 花子", initials: coreEmployeeById.yamada?.avatarLabel ?? "YH" },
-  { id: "sato", name: coreEmployeeById.sato?.name ?? "佐藤 健", initials: coreEmployeeById.sato?.avatarLabel ?? "SK" },
-  { id: "suzuki", name: coreEmployeeById.suzuki?.name ?? "鈴木 愛", initials: coreEmployeeById.suzuki?.avatarLabel ?? "SA" },
-  { id: "ito", name: coreEmployeeById.ito?.name ?? "伊藤 翔", initials: coreEmployeeById.ito?.avatarLabel ?? "IS" },
-  { id: "takahashi", name: coreEmployeeById.takahashi?.name ?? "高橋 美咲", initials: coreEmployeeById.takahashi?.avatarLabel ?? "TM" },
-  { id: "tanaka", name: coreEmployeeById.tanaka?.name ?? "田中 優", initials: coreEmployeeById.tanaka?.avatarLabel ?? "TY" },
-  { id: "nakamura", name: "中村 蓮", initials: "NR" },
-  { id: "kobayashi", name: "小林 杏", initials: "KA" },
-];
+const employees: Employee[] = coreEmployees.map((employee) => ({
+  id: employee.id,
+  name: employee.name,
+  initials: employee.avatarLabel,
+}));
 
 const shiftOptions = coreShiftTypes.map((shift) => ({
   code: shift.code,
