@@ -4,7 +4,6 @@ import { useState } from "react";
 import AppShell from "@/components/app-shell";
 
 type ShiftCode = "shift_1" | "shift_2" | "full_day" | "off" | "vacation" | "sick";
-type ViewMode = "all" | "staff";
 
 type Employee = {
   id: string;
@@ -94,7 +93,6 @@ function formatDate(day: CalendarDay) {
 }
 
 export default function ManagerShiftsPage() {
-  const [viewMode, setViewMode] = useState<ViewMode>("all");
   const [selectedDate, setSelectedDate] = useState(initialSelectedDate);
   const [assignments, setAssignments] = useState<Record<string, Assignment[]>>(createInitialAssignments);
   const [editingEmployeeId, setEditingEmployeeId] = useState<string | null>(null);
@@ -211,29 +209,6 @@ export default function ManagerShiftsPage() {
             <span className="rounded-full bg-amber-100 px-3 py-1 text-sm font-semibold text-amber-800">編集中</span>
           </div>
           <p className="mt-2 text-sm text-slate-600">スタッフの希望を確認しながら、最終シフトを作成します。</p>
-        </section>
-
-        <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-          <p className="mb-2 text-xs font-medium text-slate-500">表示切替</p>
-          <div className="grid grid-cols-2 gap-2">
-            {[
-              { id: "all" as const, label: "全体" },
-              { id: "staff" as const, label: "スタッフ別" },
-            ].map((mode) => (
-              <button
-                key={mode.id}
-                type="button"
-                onClick={() => setViewMode(mode.id)}
-                className={`rounded-xl border px-4 py-2 text-sm font-semibold transition ${
-                  viewMode === mode.id
-                    ? "border-emerald-700 bg-emerald-800 text-white"
-                    : "border-slate-200 bg-white text-slate-600 hover:border-emerald-300"
-                }`}
-              >
-                {mode.label}
-              </button>
-            ))}
-          </div>
         </section>
 
         <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:p-4">

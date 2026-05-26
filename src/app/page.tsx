@@ -3,7 +3,7 @@ import Link from "next/link";
 
 const cards = [
   { title: "今日のシフト", href: "/shifts" },
-  { title: "シフト希望", href: "/worker" },
+  { title: "シフト希望", href: "/requests" },
   { title: "レシピ確認", href: "/recipes" },
   { title: "管理者メニュー", href: "/manager" },
 ];
