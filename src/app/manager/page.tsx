@@ -130,9 +130,11 @@ export default function ManagerPage() {
                   ? "/manager/shifts"
                   : q.title === "希望を確認"
                     ? "/manager/requests"
-                    : q.title === "勤務時間集計"
-                      ? "/manager/attendance"
-                      : null;
+                    : q.title === "残業を見る"
+                      ? "/manager/overtime"
+                      : q.title === "勤務時間集計"
+                        ? "/manager/attendance"
+                        : null;
               const canOpen = href !== null;
               const card = (
                 <div

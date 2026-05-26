@@ -8,7 +8,7 @@ export default function AppShell({
   children: ReactNode;
   variant?: "mobile" | "wide";
 }) {
-  const widthClass = variant === "wide" ? "max-w-6xl px-8" : "max-w-[430px] px-4";
+  const widthClass = variant === "wide" ? "max-w-6xl px-3 sm:px-5 md:px-6" : "max-w-[430px] px-3 sm:px-4";
 
   return (
     <div className="min-h-screen bg-[#f7f1e6] text-slate-900">
