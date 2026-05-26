@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import AppShell from "@/components/app-shell";
-import { DEMO_START_DATE, shiftTypes as coreShiftTypes } from "@/lib/mock-data/core";
+import { DEMO_START_DATE, employees as coreEmployees, shiftTypes as coreShiftTypes } from "@/lib/mock-data/core";
 import type { ShiftCode } from "@/types/domain";
 
 type ViewMode = "self" | "all";
@@ -30,13 +30,15 @@ const selfEmployeeId = "yamada";
 const mockToday = DEMO_START_DATE;
 const initialSelectedDate = DEMO_START_DATE;
 
+const coreEmployeeById = Object.fromEntries(coreEmployees.map((employee) => [employee.id, employee]));
+
 const employees: Employee[] = [
-  { id: "yamada", name: "山田 花子", initials: "YH" },
-  { id: "sato", name: "佐藤 健", initials: "SK" },
-  { id: "suzuki", name: "鈴木 愛", initials: "SA" },
-  { id: "ito", name: "伊藤 翔", initials: "IS" },
-  { id: "takahashi", name: "高橋 美咲", initials: "TM" },
-  { id: "tanaka", name: "田中 優", initials: "TY" },
+  { id: "yamada", name: coreEmployeeById.yamada?.name ?? "山田 花子", initials: coreEmployeeById.yamada?.avatarLabel ?? "YH" },
+  { id: "sato", name: coreEmployeeById.sato?.name ?? "佐藤 健", initials: coreEmployeeById.sato?.avatarLabel ?? "SK" },
+  { id: "suzuki", name: coreEmployeeById.suzuki?.name ?? "鈴木 愛", initials: coreEmployeeById.suzuki?.avatarLabel ?? "SA" },
+  { id: "ito", name: coreEmployeeById.ito?.name ?? "伊藤 翔", initials: coreEmployeeById.ito?.avatarLabel ?? "IS" },
+  { id: "takahashi", name: coreEmployeeById.takahashi?.name ?? "高橋 美咲", initials: coreEmployeeById.takahashi?.avatarLabel ?? "TM" },
+  { id: "tanaka", name: coreEmployeeById.tanaka?.name ?? "田中 優", initials: coreEmployeeById.tanaka?.avatarLabel ?? "TY" },
   { id: "nakamura", name: "中村 蓮", initials: "NR" },
   { id: "kobayashi", name: "小林 杏", initials: "KA" },
 ];
