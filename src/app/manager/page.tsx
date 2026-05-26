@@ -137,9 +137,11 @@ export default function ManagerPage() {
                         ? "/manager/attendance"
                         : q.title === "スタッフ管理"
                           ? "/manager/employees"
-                          : q.title === "設定"
-                            ? "/manager/settings"
-                            : null;
+                          : q.title === "レシピ管理"
+                            ? "/manager/recipes"
+                            : q.title === "設定"
+                              ? "/manager/settings"
+                              : null;
               const canOpen = href !== null;
               const card = (
                 <div
