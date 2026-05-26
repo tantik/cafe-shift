@@ -3,9 +3,10 @@
 import { useState } from "react";
 import Link from "next/link";
 import AppShell from "@/components/app-shell";
+import { DEMO_START_DATE, shiftTypes as coreShiftTypes } from "@/lib/mock-data/core";
+import type { ShiftCode } from "@/types/domain";
 
 type ViewMode = "self" | "all";
-type ShiftCode = "shift_1" | "shift_2" | "full_day" | "off" | "vacation" | "sick";
 
 type Employee = {
   id: string;
@@ -26,8 +27,8 @@ type CalendarDay = {
 };
 
 const selfEmployeeId = "yamada";
-const mockToday = "2026-06-01";
-const initialSelectedDate = "2026-06-01";
+const mockToday = DEMO_START_DATE;
+const initialSelectedDate = DEMO_START_DATE;
 
 const employees: Employee[] = [
   { id: "yamada", name: "山田 花子", initials: "YH" },
@@ -40,14 +41,12 @@ const employees: Employee[] = [
   { id: "kobayashi", name: "小林 杏", initials: "KA" },
 ];
 
-const shiftTypes: { code: ShiftCode; label: string; marker: string; time: string }[] = [
-  { code: "shift_1", label: "1シフト", marker: "①", time: "08:30–13:00" },
-  { code: "shift_2", label: "2シフト", marker: "②", time: "13:00–17:30" },
-  { code: "full_day", label: "通しシフト", marker: "通", time: "08:30–17:30" },
-  { code: "off", label: "休み", marker: "休", time: "" },
-  { code: "vacation", label: "休暇", marker: "休暇", time: "" },
-  { code: "sick", label: "病欠", marker: "病欠", time: "" },
-];
+const shiftTypes = coreShiftTypes.map((shift) => ({
+  code: shift.code,
+  label: shift.label,
+  marker: shift.shortLabel,
+  time: shift.startTime && shift.endTime ? `${shift.startTime}–${shift.endTime}` : "",
+})) satisfies { code: ShiftCode; label: string; marker: string; time: string }[];
 
 const weekdays = ["月", "火", "水", "木", "金", "土", "日"];
 

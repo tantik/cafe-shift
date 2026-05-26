@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import AppShell from "@/components/app-shell";
-
-type ShiftCode = "shift_1" | "shift_2" | "full_day" | "off" | "vacation" | "sick";
+import { DEMO_START_DATE, DEMO_TARGET_MONTH_LABEL, shiftTypes as coreShiftTypes } from "@/lib/mock-data/core";
+import type { ShiftCode } from "@/types/domain";
 
 type Employee = {
   id: string;
@@ -41,14 +41,11 @@ const employees: Employee[] = [
   { id: "kobayashi", name: "小林 杏", initials: "KA" },
 ];
 
-const shiftOptions: { code: ShiftCode; label: string; time: string }[] = [
-  { code: "shift_1", label: "1シフト", time: "08:30–13:00" },
-  { code: "shift_2", label: "2シフト", time: "13:00–17:30" },
-  { code: "full_day", label: "通しシフト", time: "08:30–17:30" },
-  { code: "off", label: "休み", time: "" },
-  { code: "vacation", label: "休暇", time: "" },
-  { code: "sick", label: "病欠", time: "" },
-];
+const shiftOptions = coreShiftTypes.map((shift) => ({
+  code: shift.code,
+  label: shift.label,
+  time: shift.startTime && shift.endTime ? `${shift.startTime}–${shift.endTime}` : "",
+})) satisfies { code: ShiftCode; label: string; time: string }[];
 
 const shiftRequests: ShiftRequest[] = [
   { date: "2026-06-03", employeeId: "yamada", shift: "shift_1", comment: "午前のみ可能です" },
@@ -67,8 +64,8 @@ const days: CalendarDay[] = Array.from({ length: 28 }, (_, index) => ({
   day: index + 1,
   weekday: weekdays[index % weekdays.length],
 }));
-const mockToday = "2026-06-01";
-const initialSelectedDate = "2026-06-01";
+const mockToday = DEMO_START_DATE;
+const initialSelectedDate = DEMO_START_DATE;
 const sickDays = [5, 12, 19, 26];
 const standardPattern: ShiftCode[] = ["shift_1", "shift_1", "shift_1", "shift_2", "shift_2", "full_day", "off", "vacation"];
 
@@ -89,7 +86,7 @@ function createInitialAssignments() {
 }
 
 function formatDate(day: CalendarDay) {
-  return `2026年6月${day.day}日（${day.weekday}）`;
+  return `${DEMO_TARGET_MONTH_LABEL}${day.day}日（${day.weekday}）`;
 }
 
 export default function ManagerShiftsPage() {
@@ -204,7 +201,7 @@ export default function ManagerShiftsPage() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-xs text-slate-500">対象月</p>
-              <p className="mt-1 text-xl font-bold text-slate-900">2026年6月</p>
+              <p className="mt-1 text-xl font-bold text-slate-900">{DEMO_TARGET_MONTH_LABEL}</p>
             </div>
             <span className="rounded-full bg-amber-100 px-3 py-1 text-sm font-semibold text-amber-800">編集中</span>
           </div>
