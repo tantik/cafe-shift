@@ -29,6 +29,7 @@ export default function ManagerPage() {
     { title: "勤務時間集計" },
     { title: "スタッフ管理" },
     { title: "レシピ管理" },
+    { title: "設定" },
   ];
 
   return (
@@ -136,7 +137,9 @@ export default function ManagerPage() {
                         ? "/manager/attendance"
                         : q.title === "スタッフ管理"
                           ? "/manager/employees"
-                          : null;
+                          : q.title === "設定"
+                            ? "/manager/settings"
+                            : null;
               const canOpen = href !== null;
               const card = (
                 <div
