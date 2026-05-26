@@ -3,12 +3,14 @@
 import { useState } from "react";
 import Link from "next/link";
 import AppShell from "@/components/app-shell";
+import { employees as coreEmployees, shiftTypes as coreShiftTypes } from "@/lib/mock-data/core";
+import { shiftRequests as sharedShiftRequests } from "@/lib/mock-data/requests";
 
 type RequestStatus = "pending" | "reviewed" | "applied" | "hold";
 type RequestFilter = "all" | RequestStatus;
 
 type ShiftRequest = {
-  id: number;
+  id: string;
   employee: string;
   initials: string;
   date: string;
@@ -17,15 +19,44 @@ type ShiftRequest = {
   status: RequestStatus;
 };
 
+function formatJapaneseDate(dateString: string) {
+  const date = new Date(`${dateString}T00:00:00Z`);
+  const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
+  return `${date.getUTCFullYear()}年${date.getUTCMonth() + 1}月${date.getUTCDate()}日（${weekdays[date.getUTCDay()]}）`;
+}
+
+function mapSharedRequest(request: typeof sharedShiftRequests[number]): ShiftRequest {
+  const employee = coreEmployees.find((item) => item.id === request.employeeId);
+  const shift = coreShiftTypes.find((item) => item.code === request.shiftCode);
+  return {
+    id: request.id,
+    employee: employee?.name ?? request.employeeId,
+    initials: employee?.avatarLabel ?? request.employeeId.slice(0, 2),
+    date: formatJapaneseDate(request.date),
+    shift: request.shiftCode === "off" ? "休み希望" : shift?.label ?? request.shiftCode,
+    comment: request.note,
+    status: request.status,
+  };
+}
+
 const initialRequests: ShiftRequest[] = [
-  { id: 1, employee: "山田 花子", initials: "YH", date: "2026年6月3日（水）", shift: "1シフト", comment: "午前のみ可能です", status: "pending" },
-  { id: 2, employee: "佐藤 健", initials: "SK", date: "2026年6月5日（金）", shift: "休み希望", comment: "予定があります", status: "pending" },
-  { id: 3, employee: "鈴木 愛", initials: "SA", date: "2026年6月7日（日）", shift: "2シフト", status: "pending" },
-  { id: 4, employee: "伊藤 翔", initials: "IS", date: "2026年6月10日（水）", shift: "通しシフト", status: "pending" },
-  { id: 5, employee: "高橋 美咲", initials: "TM", date: "2026年6月12日（金）", shift: "休み希望", status: "pending" },
-  { id: 6, employee: "田中 優", initials: "TY", date: "2026年6月14日（日）", shift: "1シフト", status: "pending" },
-  { id: 7, employee: "中村 蓮", initials: "NR", date: "2026年6月18日（木）", shift: "2シフト", status: "pending" },
-  { id: 8, employee: "小林 杏", initials: "KA", date: "2026年6月20日（土）", shift: "休み希望", status: "pending" },
+  ...sharedShiftRequests.map(mapSharedRequest),
+  {
+    id: "req-local-007",
+    employee: "中村 蓮",
+    initials: "NR",
+    date: "2026年6月18日（木）",
+    shift: "2シフト",
+    status: "pending",
+  },
+  {
+    id: "req-local-008",
+    employee: "小林 杏",
+    initials: "KA",
+    date: "2026年6月20日（土）",
+    shift: "休み希望",
+    status: "pending",
+  },
 ];
 
 const statusDetails: Record<RequestStatus, { label: string; badge: string }> = {
@@ -53,7 +84,7 @@ export default function ManagerRequestsPage() {
     selectedFilter === "all" ? requests : requests.filter((request) => request.status === selectedFilter);
   const pendingCount = requests.filter((request) => request.status === "pending").length;
 
-  function changeStatus(id: number, status: RequestStatus) {
+  function changeStatus(id: string, status: RequestStatus) {
     setRequests((current) => current.map((request) => (request.id === id ? { ...request, status } : request)));
   }
 

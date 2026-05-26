@@ -3,6 +3,7 @@
 import { useState } from "react";
 import AppShell from "@/components/app-shell";
 import { DEMO_START_DATE, DEMO_TARGET_MONTH_LABEL, employees as coreEmployees, shiftTypes as coreShiftTypes } from "@/lib/mock-data/core";
+import { shiftRequests as sharedShiftRequests } from "@/lib/mock-data/requests";
 import type { ShiftCode } from "@/types/domain";
 
 type Employee = {
@@ -49,13 +50,15 @@ const shiftOptions = coreShiftTypes.map((shift) => ({
   time: shift.startTime && shift.endTime ? `${shift.startTime}–${shift.endTime}` : "",
 })) satisfies { code: ShiftCode; label: string; time: string }[];
 
+const sharedShiftRequestsLocal = sharedShiftRequests.map((request) => ({
+  date: request.date,
+  employeeId: request.employeeId,
+  shift: request.shiftCode === "off" ? "day_off_request" : request.shiftCode,
+  comment: request.note,
+})) satisfies ShiftRequest[];
+
 const shiftRequests: ShiftRequest[] = [
-  { date: "2026-06-03", employeeId: "yamada", shift: "shift_1", comment: "午前のみ可能です" },
-  { date: "2026-06-05", employeeId: "sato", shift: "day_off_request", comment: "予定があります" },
-  { date: "2026-06-07", employeeId: "suzuki", shift: "shift_2" },
-  { date: "2026-06-10", employeeId: "ito", shift: "full_day" },
-  { date: "2026-06-12", employeeId: "takahashi", shift: "day_off_request" },
-  { date: "2026-06-14", employeeId: "tanaka", shift: "shift_1" },
+  ...sharedShiftRequestsLocal,
   { date: "2026-06-18", employeeId: "nakamura", shift: "shift_2" },
   { date: "2026-06-20", employeeId: "kobayashi", shift: "day_off_request" },
 ];
