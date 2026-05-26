@@ -23,34 +23,34 @@ const mockEmployees = [
 ];
 
 const mockShifts = {
-  '2025-05-25': { type: '1シフト', time: '08:30–13:00', workers: ['YH', 'ST', 'TJ'] },
-  '2025-05-26': { type: '2シフト', time: '13:00–17:30', workers: ['SH', 'TK'] },
-  '2025-05-27': { type: '通しシフト', time: '08:30–17:30', workers: ['IY'] },
-  '2025-05-28': { type: '1シフト', time: '08:30–13:00', workers: ['YH', 'SH'] },
-  '2025-05-29': { type: '2シフト', time: '13:00–17:30', workers: ['ST', 'TJ', 'TK'] },
-  '2025-05-30': { type: '休み', time: '—', workers: [] },
-  '2025-05-31': { type: '休暇', time: '—', workers: [] },
-  '2025-06-01': { type: '1シフト', time: '08:30–13:00', workers: ['YH', 'TJ'] },
-  '2025-06-02': { type: '2シフト', time: '13:00–17:30', workers: ['SH', 'TK', 'IY'] },
-  '2025-06-03': { type: '通しシフト', time: '08:30–17:30', workers: ['ST'] },
-  '2025-06-04': { type: '1シフト', time: '08:30–13:00', workers: ['YH', 'SH', 'TJ'] },
-  '2025-06-05': { type: '2シフト', time: '13:00–17:30', workers: ['TK', 'IY'] },
-  '2025-06-06': { type: '休み', time: '—', workers: [] },
-  '2025-06-07': { type: '1シフト', time: '08:30–13:00', workers: ['YH', 'ST', 'TK'] },
-  '2025-06-08': { type: '2シフト', time: '13:00–17:30', workers: ['SH', 'IY'] },
-  '2025-06-09': { type: '通しシフト', time: '08:30–17:30', workers: ['TJ', 'ST'] },
-  '2025-06-10': { type: '休み', time: '—', workers: [] },
-  '2025-06-11': { type: '1シフト', time: '08:30–13:00', workers: ['YH', 'SH'] },
-  '2025-06-12': { type: '2シフト', time: '13:00–17:30', workers: ['TK', 'IY'] },
-  '2025-06-13': { type: '休暇', time: '—', workers: [] },
-  '2025-06-14': { type: '1シフト', time: '08:30–13:00', workers: ['YH', 'TJ'] },
-  '2025-06-15': { type: '2シフト', time: '13:00–17:30', workers: ['SH', 'ST'] },
-  '2025-06-16': { type: '通しシフト', time: '08:30–17:30', workers: ['TK'] },
-  '2025-06-17': { type: '1シフト', time: '08:30–13:00', workers: ['YH', 'IY'] },
-  '2025-06-18': { type: '2シフト', time: '13:00–17:30', workers: ['ST', 'TJ'] },
-  '2025-06-19': { type: '休み', time: '—', workers: [] },
-  '2025-06-20': { type: '休暇', time: '—', workers: [] },
-  '2025-06-21': { type: '1シフト', time: '08:30–13:00', workers: ['YH', 'SH', 'TK'] },
+  '2026-06-01': { type: '1シフト', time: '08:30–13:00', workers: ['YH', 'ST', 'TJ'] },
+  '2026-06-02': { type: '2シフト', time: '13:00–17:30', workers: ['SH', 'TK'] },
+  '2026-06-03': { type: '通しシフト', time: '08:30–17:30', workers: ['IY'] },
+  '2026-06-04': { type: '1シフト', time: '08:30–13:00', workers: ['YH', 'SH'] },
+  '2026-06-05': { type: '2シフト', time: '13:00–17:30', workers: ['ST', 'TJ', 'TK'] },
+  '2026-06-06': { type: '休み', time: '—', workers: [] },
+  '2026-06-07': { type: '休暇', time: '—', workers: [] },
+  '2026-06-08': { type: '1シフト', time: '08:30–13:00', workers: ['YH', 'TJ'] },
+  '2026-06-09': { type: '2シフト', time: '13:00–17:30', workers: ['SH', 'TK', 'IY'] },
+  '2026-06-10': { type: '通しシフト', time: '08:30–17:30', workers: ['ST'] },
+  '2026-06-11': { type: '1シフト', time: '08:30–13:00', workers: ['YH', 'SH', 'TJ'] },
+  '2026-06-12': { type: '2シフト', time: '13:00–17:30', workers: ['TK', 'IY'] },
+  '2026-06-13': { type: '休み', time: '—', workers: [] },
+  '2026-06-14': { type: '1シフト', time: '08:30–13:00', workers: ['YH', 'ST', 'TK'] },
+  '2026-06-15': { type: '2シフト', time: '13:00–17:30', workers: ['SH', 'IY'] },
+  '2026-06-16': { type: '通しシフト', time: '08:30–17:30', workers: ['TJ', 'ST'] },
+  '2026-06-17': { type: '休み', time: '—', workers: [] },
+  '2026-06-18': { type: '1シフト', time: '08:30–13:00', workers: ['YH', 'SH'] },
+  '2026-06-19': { type: '2シフト', time: '13:00–17:30', workers: ['TK', 'IY'] },
+  '2026-06-20': { type: '休暇', time: '—', workers: [] },
+  '2026-06-21': { type: '1シフト', time: '08:30–13:00', workers: ['YH', 'TJ'] },
+  '2026-06-22': { type: '2シフト', time: '13:00–17:30', workers: ['SH', 'ST'] },
+  '2026-06-23': { type: '通しシフト', time: '08:30–17:30', workers: ['TK'] },
+  '2026-06-24': { type: '1シフト', time: '08:30–13:00', workers: ['YH', 'IY'] },
+  '2026-06-25': { type: '2シフト', time: '13:00–17:30', workers: ['ST', 'TJ'] },
+  '2026-06-26': { type: '休み', time: '—', workers: [] },
+  '2026-06-27': { type: '休暇', time: '—', workers: [] },
+  '2026-06-28': { type: '1シフト', time: '08:30–13:00', workers: ['YH', 'SH', 'TK'] },
 };
 
 function getShiftMarker(type: string): string {
@@ -100,10 +100,10 @@ function getShiftColor(type: string): string {
 
 export default function WorkerPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('self');
-  const [selectedDate, setSelectedDate] = useState<string>('2025-05-25');
+  const [selectedDate, setSelectedDate] = useState<string>('2026-06-01');
 
-  const today = new Date('2025-05-25');
-  const startDate = new Date('2025-05-25');
+  const today = new Date('2026-06-01');
+  const startDate = new Date('2026-06-01');
   const dates = generateDates(startDate, 56);
   const slides = Array.from({ length: 4 }, (_, index) => dates.slice(index * 14, index * 14 + 14));
 

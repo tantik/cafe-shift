@@ -6,14 +6,14 @@ import AppShell from '@/components/app-shell';
 const initialRequests = [
   {
     id: 'vacation_001',
-    startDate: '2025-06-10',
-    endDate: '2025-06-14',
+    startDate: '2026-06-10',
+    endDate: '2026-06-14',
     comment: '家族旅行のため',
   },
   {
     id: 'vacation_002',
-    startDate: '2025-08-05',
-    endDate: '2025-08-07',
+    startDate: '2026-07-05',
+    endDate: '2026-07-07',
     comment: '帰省のため',
   },
 ];
@@ -32,10 +32,11 @@ function calculateDays(startDate: string, endDate: string) {
 }
 
 export default function VacationsPage() {
-  const [startDate, setStartDate] = useState('2025-06-01');
-  const [endDate, setEndDate] = useState('2025-06-03');
+  const [startDate, setStartDate] = useState('2026-06-01');
+  const [endDate, setEndDate] = useState('2026-06-03');
   const [comment, setComment] = useState('');
   const [requests, setRequests] = useState(initialRequests);
+  const [nextRequestId, setNextRequestId] = useState(3);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -56,13 +57,14 @@ export default function VacationsPage() {
     }
 
     const newRequest = {
-      id: `vacation_${Date.now()}`,
+      id: `vacation_${String(nextRequestId).padStart(3, '0')}`,
       startDate,
       endDate,
       comment,
     };
 
     setRequests((prev) => [newRequest, ...prev]);
+    setNextRequestId((current) => current + 1);
     setSuccess('休暇希望を追加しました（デモ）');
     setComment('');
   };

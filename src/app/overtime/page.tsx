@@ -8,7 +8,7 @@ const reasonOptions = ['清掃', '接客', '仕込み', '在庫確認', 'その�
 const initialEntries = [
   {
     id: 'overtime_001',
-    date: '2025-05-24',
+    date: '2026-06-03',
     startTime: '17:30',
     endTime: '19:00',
     reason: '清掃',
@@ -16,7 +16,7 @@ const initialEntries = [
   },
   {
     id: 'overtime_002',
-    date: '2025-05-23',
+    date: '2026-06-04',
     startTime: '18:00',
     endTime: '19:30',
     reason: '接客',
@@ -69,12 +69,13 @@ function formatDateLabel(dateString: string) {
 }
 
 export default function OvertimePage() {
-  const [date, setDate] = useState('2025-05-25');
+  const [date, setDate] = useState('2026-06-01');
   const [startTime, setStartTime] = useState('17:30');
   const [endTime, setEndTime] = useState('19:00');
   const [reason, setReason] = useState('清掃');
   const [memo, setMemo] = useState('');
   const [entries, setEntries] = useState(initialEntries);
+  const [nextEntryId, setNextEntryId] = useState(3);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -96,7 +97,7 @@ export default function OvertimePage() {
     }
 
     const newEntry = {
-      id: `overtime_${Date.now()}`,
+      id: `overtime_${String(nextEntryId).padStart(3, '0')}`,
       date,
       startTime,
       endTime,
@@ -105,6 +106,7 @@ export default function OvertimePage() {
     };
 
     setEntries((prev) => [newEntry, ...prev]);
+    setNextEntryId((current) => current + 1);
     setSuccess('残業を保存しました（デモ）');
     setError('');
     setMemo('');

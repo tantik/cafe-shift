@@ -3,7 +3,7 @@ import Link from "next/link";
 
 export default function ManagerPage() {
   // Mock data (deterministic, no external calls)
-  const todayLabel = "5月25日（月）";
+  const todayLabel = "6月1日（月）";
   const shiftGroups = [
     { title: "1シフト 08:30–13:00", names: ["山田", "佐藤", "田中"] },
     { title: "2シフト 13:00–17:30", names: ["鈴木", "高橋"] },

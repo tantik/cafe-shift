@@ -68,7 +68,7 @@ const days: CalendarDay[] = Array.from({ length: 28 }, (_, index) => ({
   day: index + 1,
   weekday: weekdays[index % weekdays.length],
 }));
-const mockToday = "2026-06-08";
+const mockToday = "2026-06-01";
 const initialSelectedDate = "2026-06-01";
 const sickDays = [5, 12, 19, 26];
 const standardPattern: ShiftCode[] = ["shift_1", "shift_1", "shift_1", "shift_2", "shift_2", "full_day", "off", "vacation"];
