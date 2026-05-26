@@ -8,6 +8,18 @@ export type ShiftCode =
   | "vacation"
   | "sick";
 
+export type ShiftRequestStatus = "pending" | "reviewed" | "applied";
+
+export type ShiftRequest = {
+  id: string;
+  employeeId: string;
+  date: string;
+  shiftCode: ShiftCode;
+  note?: string;
+  status: ShiftRequestStatus;
+  createdAt: string;
+};
+
 export type Employee = {
   id: string;
   name: string;

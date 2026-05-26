@@ -1,0 +1,56 @@
+import type { ShiftRequest } from "@/types/domain";
+
+export const shiftRequests = [
+  {
+    id: "req-001",
+    employeeId: "yamada",
+    date: "2026-06-03",
+    shiftCode: "shift_1",
+    note: "午前のみ可能です",
+    status: "pending",
+    createdAt: "2026-05-25T09:00:00Z",
+  },
+  {
+    id: "req-002",
+    employeeId: "sato",
+    date: "2026-06-05",
+    shiftCode: "off",
+    note: "予定があります",
+    status: "pending",
+    createdAt: "2026-05-26T10:15:00Z",
+  },
+  {
+    id: "req-003",
+    employeeId: "suzuki",
+    date: "2026-06-07",
+    shiftCode: "shift_2",
+    status: "reviewed",
+    createdAt: "2026-05-27T14:20:00Z",
+  },
+  {
+    id: "req-004",
+    employeeId: "ito",
+    date: "2026-06-10",
+    shiftCode: "full_day",
+    note: "通しで対応できます",
+    status: "reviewed",
+    createdAt: "2026-05-28T11:30:00Z",
+  },
+  {
+    id: "req-005",
+    employeeId: "takahashi",
+    date: "2026-06-12",
+    shiftCode: "off",
+    note: "私用のため休み希望です",
+    status: "applied",
+    createdAt: "2026-05-29T08:45:00Z",
+  },
+  {
+    id: "req-006",
+    employeeId: "tanaka",
+    date: "2026-06-14",
+    shiftCode: "shift_1",
+    status: "applied",
+    createdAt: "2026-05-30T13:00:00Z",
+  },
+] satisfies ShiftRequest[];
