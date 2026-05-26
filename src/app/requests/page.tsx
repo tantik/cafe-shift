@@ -24,11 +24,6 @@ function formatKey(date: Date) {
     date.getDate()
   ).padStart(2, "0")}`;
 }
-
-function jpDateLabel(date: Date) {
-  return `${date.getMonth() + 1}月${date.getDate()}日`;
-}
-
 function jpWeekday(date: Date) {
   const wk = ["日", "月", "火", "水", "木", "金", "土"];
   return wk[date.getDay()];
