@@ -134,7 +134,9 @@ export default function ManagerPage() {
                       ? "/manager/overtime"
                       : q.title === "勤務時間集計"
                         ? "/manager/attendance"
-                        : null;
+                        : q.title === "スタッフ管理"
+                          ? "/manager/employees"
+                          : null;
               const canOpen = href !== null;
               const card = (
                 <div
