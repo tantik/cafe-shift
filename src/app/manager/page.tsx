@@ -12,7 +12,7 @@ export default function ManagerPage() {
   const summary = { present: 6, off: 2 };
   const attention = [
     { title: "シフト希望", subtitle: "未確認", count: 8 },
-    { title: "残業記録", subtitle: "今週", count: 3 },
+    { title: "勤務報告", subtitle: "延長勤務あり", count: 3 },
     { title: "病欠・欠勤", subtitle: "", count: 1 },
   ];
   const timeSummaryPeriod = "5月1日〜5月31日";
@@ -25,7 +25,6 @@ export default function ManagerPage() {
   const quickActions = [
     { title: "シフトを編集" },
     { title: "希望を確認" },
-    { title: "残業を見る" },
     { title: "勤務報告" },
     { title: "勤務時間集計" },
     { title: "提案・改善" },
@@ -133,21 +132,19 @@ export default function ManagerPage() {
                   ? "/manager/shifts"
                   : q.title === "希望を確認"
                     ? "/manager/requests"
-                    : q.title === "残業を見る"
-                      ? "/manager/overtime"
-                      : q.title === "勤務報告"
-                        ? "/manager/time-reports"
-                        : q.title === "勤務時間集計"
-                          ? "/manager/attendance"
-                          : q.title === "提案・改善"
-                            ? "/manager/suggestions"
-                            : q.title === "スタッフ管理"
-                              ? "/manager/employees"
-                              : q.title === "レシピ管理"
-                                ? "/manager/recipes"
-                                : q.title === "設定"
-                                  ? "/manager/settings"
-                                  : null;
+                    : q.title === "勤務報告"
+                      ? "/manager/time-reports"
+                      : q.title === "勤務時間集計"
+                        ? "/manager/attendance"
+                        : q.title === "提案・改善"
+                          ? "/manager/suggestions"
+                          : q.title === "スタッフ管理"
+                            ? "/manager/employees"
+                            : q.title === "レシピ管理"
+                              ? "/manager/recipes"
+                              : q.title === "設定"
+                                ? "/manager/settings"
+                                : null;
               const canOpen = href !== null;
               const card = (
                 <div
@@ -160,7 +157,7 @@ export default function ManagerPage() {
                   <div>
                     <div className="font-medium text-slate-800">{q.title}</div>
                     <div className={`text-xs ${canOpen ? "font-semibold text-emerald-700" : "text-slate-500"}`}>
-                      {canOpen ? "開く →" : "準備中"}
+                      {q.title === "勤務報告" ? "延長勤務も確認 →" : canOpen ? "開く →" : "準備中"}
                     </div>
                   </div>
                   <div className="text-xs text-slate-400">›</div>

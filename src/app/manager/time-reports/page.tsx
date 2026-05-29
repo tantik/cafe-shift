@@ -16,6 +16,8 @@ type TimeReport = {
   breakMinutes: number;
   transportCost: number;
   memo: string;
+  hasExtendedWork: boolean;
+  extendedWorkReason: string;
   status: ReportStatus;
 };
 
@@ -30,6 +32,8 @@ const initialReports: TimeReport[] = [
     breakMinutes: 30,
     transportCost: 420,
     memo: "開店準備を対応",
+    hasExtendedWork: false,
+    extendedWorkReason: "",
     status: "unreviewed",
   },
   {
@@ -42,6 +46,8 @@ const initialReports: TimeReport[] = [
     breakMinutes: 0,
     transportCost: 0,
     memo: "",
+    hasExtendedWork: true,
+    extendedWorkReason: "急な来客対応",
     status: "reviewed",
   },
   {
@@ -54,6 +60,8 @@ const initialReports: TimeReport[] = [
     breakMinutes: 60,
     transportCost: 520,
     memo: "仕込みを多めに対応",
+    hasExtendedWork: true,
+    extendedWorkReason: "片付け延長",
     status: "unreviewed",
   },
   {
@@ -66,6 +74,8 @@ const initialReports: TimeReport[] = [
     breakMinutes: 30,
     transportCost: 360,
     memo: "電車遅延あり",
+    hasExtendedWork: false,
+    extendedWorkReason: "",
     status: "reviewed",
   },
 ];
@@ -109,6 +119,7 @@ export default function ManagerTimeReportsPage() {
       totalHours: formatHours(reports.reduce((sum, report) => sum + actualMinutes(report), 0)),
       transport: reports.reduce((sum, report) => sum + report.transportCost, 0),
       unreviewed: reports.filter((report) => report.status === "unreviewed").length,
+      extendedWork: reports.filter((report) => report.hasExtendedWork).length,
     }),
     [reports],
   );
@@ -127,7 +138,7 @@ export default function ManagerTimeReportsPage() {
             <div>
               <p className="text-xs font-semibold tracking-[0.16em] text-emerald-700">勤務報告</p>
               <h1 className="mt-1 text-2xl font-bold text-slate-900">勤務報告</h1>
-              <p className="mt-1 text-sm text-slate-600">スタッフの出勤・退勤・休憩・交通費を確認できます</p>
+              <p className="mt-1 text-sm text-slate-600">スタッフの出勤・退勤・休憩・交通費と延長勤務を確認できます</p>
             </div>
             <span className="inline-flex self-start rounded-full bg-emerald-800 px-3 py-1.5 text-sm font-semibold text-white sm:self-auto">
               店長 田中
@@ -141,6 +152,7 @@ export default function ManagerTimeReportsPage() {
             { label: "実働時間合計", value: summary.totalHours },
             { label: "交通費合計", value: `${summary.transport.toLocaleString()}円` },
             { label: "未確認", value: `${summary.unreviewed}件` },
+            { label: "延長勤務", value: `${summary.extendedWork}件` },
           ].map((item) => (
             <div key={item.label} className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
               <p className="text-xs text-slate-500">{item.label}</p>
@@ -188,6 +200,16 @@ export default function ManagerTimeReportsPage() {
                   <span className="rounded-full bg-slate-50 px-2 py-1 text-xs font-semibold text-slate-700">
                     {statusLabel(report.status)}
                   </span>
+                  {report.hasExtendedWork ? (
+                    <span className="rounded-full bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-800">
+                      予定より長く勤務
+                    </span>
+                  ) : null}
+                  {report.hasExtendedWork && report.status === "unreviewed" ? (
+                    <span className="rounded-full bg-rose-50 px-2 py-1 text-xs font-semibold text-rose-700">
+                      要確認
+                    </span>
+                  ) : null}
                 </div>
               </div>
               <div className="mt-3 grid gap-2 text-sm text-slate-600 sm:grid-cols-3">
@@ -195,6 +217,12 @@ export default function ManagerTimeReportsPage() {
                 <p>交通費 {report.transportCost.toLocaleString()}円</p>
                 <p className="truncate">メモ {report.memo || "なし"}</p>
               </div>
+              {report.hasExtendedWork ? (
+                <div className="mt-3 rounded-xl border border-amber-100 bg-amber-50 px-3 py-2 text-sm text-slate-700">
+                  <p className="font-semibold text-amber-900">予定より長く勤務</p>
+                  <p className="mt-1">理由: {report.extendedWorkReason || "未入力"}</p>
+                </div>
+              ) : null}
               <div className="mt-3 text-right">
                 {report.status === "unreviewed" ? (
                   <button
