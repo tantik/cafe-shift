@@ -2,7 +2,7 @@ import type { AppLanguage } from "@/lib/i18n/types";
 
 export const dictionaries: Record<AppLanguage, Record<string, string>> = {
   ja: {
-    "app.name": "Cafe Shift",
+    "app.name": "Mame To Cha Tokyo",
     "app.subtitle": "LINEで使えるカフェ向けシフト管理",
     "nav.shifts": "シフト",
     "nav.requests": "希望",
@@ -12,7 +12,7 @@ export const dictionaries: Record<AppLanguage, Record<string, string>> = {
     "language.ja": "日本語",
     "language.en": "English",
     "language.ru": "Русский",
-    "home.title": "Cafe Shift",
+    "home.title": "Mame To Cha Tokyo",
     "home.subtitle": "シンプルなシフト管理とレシピ確認をスマホでかんたんに。",
     "home.workerCardTitle": "今日のシフト",
     "home.managerCardTitle": "管理者メニュー",
@@ -20,7 +20,7 @@ export const dictionaries: Record<AppLanguage, Record<string, string>> = {
     "settings.languageDescription": "自分の画面で使う言語を選択できます。",
   },
   en: {
-    "app.name": "Cafe Shift",
+    "app.name": "Mame To Cha Tokyo",
     "app.subtitle": "Shift management for cafes, made for LINE",
     "nav.shifts": "Shifts",
     "nav.requests": "Requests",
@@ -30,7 +30,7 @@ export const dictionaries: Record<AppLanguage, Record<string, string>> = {
     "language.ja": "日本語",
     "language.en": "English",
     "language.ru": "Русский",
-    "home.title": "Cafe Shift",
+    "home.title": "Mame To Cha Tokyo",
     "home.subtitle": "Simple shift management and recipe checks on your phone.",
     "home.workerCardTitle": "Today’s Shifts",
     "home.managerCardTitle": "Manager Menu",
@@ -38,7 +38,7 @@ export const dictionaries: Record<AppLanguage, Record<string, string>> = {
     "settings.languageDescription": "Choose the language used on your own screen.",
   },
   ru: {
-    "app.name": "Cafe Shift",
+    "app.name": "Mame To Cha Tokyo",
     "app.subtitle": "Управление сменами кафе для LINE",
     "nav.shifts": "Смены",
     "nav.requests": "Заявки",
@@ -48,7 +48,7 @@ export const dictionaries: Record<AppLanguage, Record<string, string>> = {
     "language.ja": "日本語",
     "language.en": "English",
     "language.ru": "Русский",
-    "home.title": "Cafe Shift",
+    "home.title": "Mame To Cha Tokyo",
     "home.subtitle": "Простое управление сменами и рецептами с телефона.",
     "home.workerCardTitle": "Сегодняшние смены",
     "home.managerCardTitle": "Меню менеджера",
