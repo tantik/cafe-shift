@@ -540,7 +540,7 @@ function ShiftsContent() {
                       </div>
                       <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-600">
                         <span>
-                          {t("shifts.report.transportCost")} {report.transportCost.toLocaleString()}円
+                          {t("shifts.report.transportCost")} {report.transportCost.toLocaleString("ja-JP")}円
                         </span>
                         <span>
                           {t("shifts.report.longerThanPlannedShort")}:{" "}
