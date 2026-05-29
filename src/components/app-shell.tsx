@@ -4,6 +4,7 @@ import Link from "next/link";
 import LanguageSwitcher from "@/components/language-switcher";
 import MobileNav from "@/components/mobile-nav";
 import { I18nProvider } from "@/lib/i18n/use-i18n";
+import { dictionaries } from "@/lib/i18n/dictionaries";
 import logo from "@/logo.png";
 
 export default function AppShell({
@@ -24,15 +25,15 @@ export default function AppShell({
               <Link
                 href="/"
                 className="flex min-w-0 items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2"
-                aria-label="Mame To Cha Tokyo home"
+                aria-label={`${dictionaries.ja["app.name"]} home`}
               >
                 <Image
                   src={logo}
-                  alt="Mame To Cha Tokyo"
+                  alt={dictionaries.ja["app.name"]}
                   className="h-9 w-9 object-contain sm:h-10 sm:w-10"
                   priority
                 />
-                <span className="truncate text-base font-semibold leading-tight text-slate-900 sm:text-lg">Mame To Cha Tokyo</span>
+                <span className="truncate text-base font-semibold leading-tight text-slate-900 sm:text-lg">{dictionaries.ja["app.name"]}</span>
               </Link>
               <LanguageSwitcher />
             </div>
