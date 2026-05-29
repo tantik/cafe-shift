@@ -2,16 +2,18 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useI18n } from '@/lib/i18n/use-i18n';
 
 const navItems = [
-  { href: '/shifts', label: 'シフト' },
-  { href: '/requests', label: '希望' },
-  { href: '/recipes', label: 'レシピ' },
-  { href: '/manager', label: '管理' },
+  { href: '/shifts', labelKey: 'nav.shifts' },
+  { href: '/requests', labelKey: 'nav.requests' },
+  { href: '/recipes', labelKey: 'nav.recipes' },
+  { href: '/manager', labelKey: 'nav.manager' },
 ];
 
 export default function MobileNav() {
   const pathname = usePathname();
+  const { t } = useI18n();
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200 bg-white/95 px-3 py-3 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] backdrop-blur-sm">
@@ -28,7 +30,7 @@ export default function MobileNav() {
                   : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
               }`}
             >
-              {item.label}
+              {t(item.labelKey)}
             </Link>
           );
         })}

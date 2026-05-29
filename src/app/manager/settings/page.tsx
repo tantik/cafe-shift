@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import AppShell from "@/components/app-shell";
+import LanguageSwitcher from "@/components/language-switcher";
 
 type Role = "manager" | "worker";
-type Language = "日本語" | "English" | "Русский";
 
 type User = {
   id: number;
@@ -22,7 +22,6 @@ const users: User[] = [
 ];
 
 const periodPresets = [1, 10, 16, 21];
-const languageOptions: Language[] = ["日本語", "English", "Русский"];
 
 function formatPeriodExample(day: number) {
   const endDay = day === 1 ? "5月31日" : `6月${day - 1}日`;
@@ -31,7 +30,6 @@ function formatPeriodExample(day: number) {
 
 export default function ManagerSettingsPage() {
   const [periodStart, setPeriodStart] = useState("16");
-  const [selectedLanguage, setSelectedLanguage] = useState<Language>("日本語");
   const [managedUsers, setManagedUsers] = useState<User[]>(users);
   const [editingUserId, setEditingUserId] = useState<number | null>(null);
   const [draftRole, setDraftRole] = useState<Role>("worker");
@@ -180,21 +178,8 @@ export default function ManagerSettingsPage() {
           <h2 className="font-semibold text-slate-900">個人設定</h2>
           <p className="mt-2 text-sm font-semibold text-slate-800">表示言語</p>
           <p className="mt-1 text-sm text-slate-600">自分の画面で使う言語を選択できます。</p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {languageOptions.map((language) => (
-              <button
-                key={language}
-                type="button"
-                onClick={() => setSelectedLanguage(language)}
-                className={`rounded-lg border px-3 py-2 text-sm font-semibold ${
-                  selectedLanguage === language
-                    ? "border-emerald-700 bg-emerald-800 text-white"
-                    : "border-slate-200 bg-white text-slate-700"
-                }`}
-              >
-                {language}
-              </button>
-            ))}
+          <div className="mt-2">
+            <LanguageSwitcher />
           </div>
           <p className="mt-3 text-sm text-slate-500">MVPでは日本語UIを標準にし、多言語表示は後で拡張します。</p>
         </section>
