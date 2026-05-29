@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import AppShell from "@/components/app-shell";
+import { useI18n } from "@/lib/i18n/use-i18n";
 import { DEMO_START_DATE, DEMO_TARGET_MONTH_LABEL, employees as coreEmployees, shiftTypes as coreShiftTypes } from "@/lib/mock-data/core";
 import { shiftRequests as sharedShiftRequests } from "@/lib/mock-data/requests";
 import type { ShiftCode } from "@/types/domain";
@@ -88,6 +89,15 @@ function formatDate(day: CalendarDay) {
 }
 
 export default function ManagerShiftsPage() {
+  return (
+    <AppShell variant="wide">
+      <ManagerShiftsContent />
+    </AppShell>
+  );
+}
+
+function ManagerShiftsContent() {
+  const { t } = useI18n();
   const [selectedDate, setSelectedDate] = useState(initialSelectedDate);
   const [assignments, setAssignments] = useState<Record<string, Assignment[]>>(createInitialAssignments);
   const [editingEmployeeId, setEditingEmployeeId] = useState<string | null>(null);
@@ -180,17 +190,17 @@ export default function ManagerShiftsPage() {
   }
 
   return (
-    <AppShell variant="wide">
+    <>
       <div className="mx-auto max-w-4xl space-y-4 pb-8">
         <header className="rounded-2xl border border-emerald-100 bg-gradient-to-r from-emerald-50 to-amber-50 p-4 shadow-sm sm:p-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-xs font-semibold tracking-[0.18em] text-emerald-700">シフト管理</p>
-              <h1 className="mt-1 text-2xl font-bold text-slate-900">シフト編集</h1>
-              <p className="mt-1 text-sm text-slate-600">月ごとのシフトを確認しながら、日別にスタッフの勤務を調整できます</p>
+              <p className="text-xs font-semibold tracking-[0.18em] text-emerald-700">{t("managerShifts.title")}</p>
+              <h1 className="mt-1 text-2xl font-bold text-slate-900">{t("managerShifts.title")}</h1>
+              <p className="mt-1 text-sm text-slate-600">{t("managerShifts.subtitle")}</p>
             </div>
             <span className="inline-flex self-start rounded-full bg-emerald-800 px-3 py-1.5 text-sm font-semibold text-white sm:self-auto">
-              店長 田中
+              {t("managerShifts.managerChip")}
             </span>
           </div>
         </header>
@@ -198,21 +208,21 @@ export default function ManagerShiftsPage() {
         <section className="rounded-2xl border border-amber-100 bg-amber-50 p-4 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-xs text-slate-500">対象月</p>
+              <p className="text-xs text-slate-500">{t("managerShifts.targetMonth")}</p>
               <p className="mt-1 text-xl font-bold text-slate-900">{DEMO_TARGET_MONTH_LABEL}</p>
             </div>
-            <span className="rounded-full bg-amber-100 px-3 py-1 text-sm font-semibold text-amber-800">編集中</span>
+            <span className="rounded-full bg-amber-100 px-3 py-1 text-sm font-semibold text-amber-800">{t("managerShifts.editingChip")}</span>
           </div>
-          <p className="mt-2 text-sm text-slate-600">スタッフの希望を確認しながら、最終シフトを作成します。</p>
+          <p className="mt-2 text-sm text-slate-600">{t("managerShifts.managerNote")}</p>
         </section>
 
         <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:p-4">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <h2 className="font-semibold text-slate-900">2週間シフト</h2>
-              <p className="text-xs text-slate-500">横にスライドして次の2週間を確認</p>
+              <h2 className="font-semibold text-slate-900">{t("managerShifts.calendarTitle")}</h2>
+              <p className="text-xs text-slate-500">{t("managerShifts.calendarHint")}</p>
             </div>
-            <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-800">28日分</span>
+            <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-800">{t("managerShifts.daysCount")}</span>
           </div>
 
           <div className="mt-3 flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2">
@@ -242,11 +252,17 @@ export default function ManagerShiftsPage() {
                     >
                       <span className="block text-[10px] text-slate-500">{day.weekday}</span>
                       <span className="block text-sm font-bold text-slate-900">{day.day}</span>
-                      {isToday ? <span className="block text-[10px] font-semibold text-emerald-700">今日</span> : null}
-                      <span className="mt-1 block text-[10px] leading-4 text-slate-600">① {firstCount}名</span>
-                      <span className="block text-[10px] leading-4 text-slate-600">② {secondCount}名</span>
-                      <span className="block text-[10px] leading-4 text-slate-600">通 {fullCount}名</span>
-                      {hasSick ? <span className="mt-1 inline-block rounded bg-rose-100 px-1 text-[10px] text-rose-700">病欠</span> : null}
+                      {isToday ? <span className="block text-[10px] font-semibold text-emerald-700">{t("managerShifts.today")}</span> : null}
+                      <span className="mt-1 block text-[10px] leading-4 text-slate-600">
+                        {t("managerShifts.shiftShort1")} {firstCount}{t("managerShifts.peopleSuffix")}
+                      </span>
+                      <span className="block text-[10px] leading-4 text-slate-600">
+                        {t("managerShifts.shiftShort2")} {secondCount}{t("managerShifts.peopleSuffix")}
+                      </span>
+                      <span className="block text-[10px] leading-4 text-slate-600">
+                        {t("managerShifts.shiftShortFull")} {fullCount}{t("managerShifts.peopleSuffix")}
+                      </span>
+                      {hasSick ? <span className="mt-1 inline-block rounded bg-rose-100 px-1 text-[10px] text-rose-700">{t("managerShifts.sickBadge")}</span> : null}
                     </button>
                   );
                 })}
@@ -259,7 +275,7 @@ export default function ManagerShiftsPage() {
           <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <h2 className="text-lg font-semibold text-slate-900">選択した日のシフト</h2>
+                <h2 className="text-lg font-semibold text-slate-900">{t("managerShifts.assignmentsTitle")}</h2>
                 <p className="mt-1 text-sm text-slate-500">{formatDate(selectedDay)}</p>
               </div>
               <button
@@ -268,7 +284,7 @@ export default function ManagerShiftsPage() {
                 disabled={availableEmployees.length === 0}
                 className="rounded-xl bg-emerald-800 px-3 py-2 text-sm font-semibold text-white shadow-sm transition disabled:cursor-not-allowed disabled:bg-slate-300"
               >
-                スタッフを追加
+                {t("managerShifts.addStaff")}
               </button>
             </div>
 
@@ -282,10 +298,10 @@ export default function ManagerShiftsPage() {
                       <p className="text-sm font-semibold text-slate-800">
                         {shift.label} {shift.time}
                       </p>
-                      <span className="text-xs text-slate-500">{assigned.length}名</span>
+                      <span className="text-xs text-slate-500">{assigned.length}{t("managerShifts.peopleSuffix")}</span>
                     </div>
                     {assigned.length === 0 ? (
-                      <p className="mt-2 text-xs text-slate-400">割り当てなし</p>
+                      <p className="mt-2 text-xs text-slate-400">{t("managerShifts.unassigned")}</p>
                     ) : (
                       <div className="mt-2 space-y-2">
                         {assigned.map((assignment) => {
@@ -309,7 +325,7 @@ export default function ManagerShiftsPage() {
                                 onClick={() => openEditor(assignment)}
                                 className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-800"
                               >
-                                編集
+                                {t("managerShifts.edit")}
                               </button>
                             </div>
                           );
@@ -323,11 +339,11 @@ export default function ManagerShiftsPage() {
           </section>
 
           <section className="rounded-2xl border border-amber-100 bg-amber-50 p-3 shadow-sm sm:p-4">
-            <h2 className="font-semibold text-slate-900">この日の希望</h2>
-            <p className="mt-1 text-sm text-slate-600">スタッフの希望を確認しながらシフトを調整できます</p>
+            <h2 className="font-semibold text-slate-900">{t("managerShifts.requestsForDay")}</h2>
+            <p className="mt-1 text-sm text-slate-600">{t("managerShifts.requestsForDaySubtitle")}</p>
 
             {selectedRequests.length === 0 ? (
-              <p className="mt-4 rounded-xl bg-white/80 px-3 py-4 text-sm text-slate-500">この日の希望はありません</p>
+              <p className="mt-4 rounded-xl bg-white/80 px-3 py-4 text-sm text-slate-500">{t("managerShifts.noRequestsForDay")}</p>
             ) : (
               <div className="mt-3 space-y-2">
                 {selectedRequests.map((request) => {
@@ -335,7 +351,7 @@ export default function ManagerShiftsPage() {
                   const isAssigned = selectedAssignments.some((assignment) => assignment.employeeId === request.employeeId);
                   const isDayOffRequest = request.shift === "day_off_request";
                   const requestedShift = isDayOffRequest
-                    ? "休み希望"
+                    ? t("managerShifts.offRequest")
                     : shiftOptions.find((shift) => shift.code === request.shift)?.label ?? "";
 
                   if (!employee) {
@@ -360,11 +376,15 @@ export default function ManagerShiftsPage() {
                                     : "bg-amber-100 text-amber-800"
                               }`}
                             >
-                              {isAssigned ? "登録済み" : isDayOffRequest ? "休み希望" : "希望"}
+                              {isAssigned
+                                ? t("managerShifts.alreadyAssigned")
+                                : isDayOffRequest
+                                  ? t("managerShifts.offRequest")
+                                  : t("managerShifts.requested")}
                             </span>
                           </div>
                           <p className="mt-1 text-sm font-medium text-emerald-800">{requestedShift}</p>
-                          {request.comment ? <p className="mt-1 text-xs text-slate-500">メモ: {request.comment}</p> : null}
+                          {request.comment ? <p className="mt-1 text-xs text-slate-500">{t("managerShifts.memo")}: {request.comment}</p> : null}
                         </div>
                       </div>
                       {!isAssigned && !isDayOffRequest ? (
@@ -373,10 +393,10 @@ export default function ManagerShiftsPage() {
                           onClick={() => addRequestToShift(request)}
                           className="mt-3 w-full rounded-lg bg-emerald-800 px-3 py-2 text-sm font-semibold text-white"
                         >
-                          シフトに追加
+                          {t("managerShifts.addToShift")}
                         </button>
                       ) : isDayOffRequest && !isAssigned ? (
-                        <p className="mt-2 text-sm text-slate-500">休み希望です</p>
+                        <p className="mt-2 text-sm text-slate-500">{t("managerShifts.offRequestNote")}</p>
                       ) : null}
                     </article>
                   );
@@ -387,21 +407,21 @@ export default function ManagerShiftsPage() {
         </div>
 
         <p className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 shadow-sm">
-          この画面はデモです。実際の保存は後でSupabaseに接続します。
+          {t("managerShifts.demoNote")}
         </p>
       </div>
 
       {editingEmployee ? (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/35 p-3 sm:items-center">
-          <section className="w-full max-w-lg rounded-2xl bg-white p-4 shadow-xl" role="dialog" aria-modal="true" aria-label="シフトを編集">
+          <section className="w-full max-w-lg rounded-2xl bg-white p-4 shadow-xl" role="dialog" aria-modal="true" aria-label={t("managerShifts.editShiftTitle")}>
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h2 className="text-lg font-bold text-slate-900">シフトを編集</h2>
+                <h2 className="text-lg font-bold text-slate-900">{t("managerShifts.editShiftTitle")}</h2>
                 <p className="mt-1 text-sm text-slate-600">{editingEmployee.name}</p>
                 <p className="text-xs text-slate-500">{formatDate(selectedDay)}</p>
               </div>
               <button type="button" onClick={closeEditor} className="rounded-lg px-2 py-1 text-sm text-slate-500">
-                閉じる
+                {t("common.close")}
               </button>
             </div>
 
@@ -424,13 +444,13 @@ export default function ManagerShiftsPage() {
             </div>
 
             <label className="mt-4 block text-sm font-semibold text-slate-800" htmlFor="shift-memo">
-              メモ
+              {t("managerShifts.memo")}
             </label>
             <textarea
               id="shift-memo"
               value={draftMemo}
               onChange={(event) => setDraftMemo(event.target.value)}
-              placeholder="メモがあれば入力してください"
+              placeholder={t("managerShifts.memoPlaceholder")}
               className="mt-2 min-h-20 w-full rounded-xl border border-slate-200 p-3 text-sm outline-none focus:border-emerald-500"
             />
 
@@ -440,14 +460,14 @@ export default function ManagerShiftsPage() {
                 onClick={saveAssignment}
                 className="flex-1 rounded-xl bg-emerald-800 px-4 py-2.5 text-sm font-semibold text-white"
               >
-                保存する
+                {t("managerShifts.save")}
               </button>
               <button
                 type="button"
                 onClick={closeEditor}
                 className="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700"
               >
-                閉じる
+                {t("managerShifts.cancel")}
               </button>
             </div>
           </section>
@@ -456,19 +476,19 @@ export default function ManagerShiftsPage() {
 
       {isAdding ? (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/35 p-3 sm:items-center">
-          <section className="w-full max-w-lg rounded-2xl bg-white p-4 shadow-xl" role="dialog" aria-modal="true" aria-label="スタッフを追加">
+          <section className="w-full max-w-lg rounded-2xl bg-white p-4 shadow-xl" role="dialog" aria-modal="true" aria-label={t("managerShifts.addShiftTitle")}>
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h2 className="text-lg font-bold text-slate-900">スタッフを追加</h2>
+                <h2 className="text-lg font-bold text-slate-900">{t("managerShifts.addShiftTitle")}</h2>
                 <p className="mt-1 text-xs text-slate-500">{formatDate(selectedDay)}</p>
               </div>
               <button type="button" onClick={closeAddEditor} className="rounded-lg px-2 py-1 text-sm text-slate-500">
-                閉じる
+                {t("common.close")}
               </button>
             </div>
 
             <div className="mt-4">
-              <p className="text-sm font-semibold text-slate-800">スタッフ</p>
+              <p className="text-sm font-semibold text-slate-800">{t("managerShifts.employee")}</p>
               <div className="mt-2 grid grid-cols-2 gap-2">
                 {availableEmployees.map((employee) => (
                   <button
@@ -491,7 +511,7 @@ export default function ManagerShiftsPage() {
             </div>
 
             <div className="mt-4">
-              <p className="text-sm font-semibold text-slate-800">シフト</p>
+              <p className="text-sm font-semibold text-slate-800">{t("managerShifts.shift")}</p>
               <div className="mt-2 grid grid-cols-2 gap-2">
                 {shiftOptions.map((shift) => (
                   <button
@@ -512,13 +532,13 @@ export default function ManagerShiftsPage() {
             </div>
 
             <label className="mt-4 block text-sm font-semibold text-slate-800" htmlFor="new-shift-memo">
-              メモ
+              {t("managerShifts.memo")}
             </label>
             <textarea
               id="new-shift-memo"
               value={newMemo}
               onChange={(event) => setNewMemo(event.target.value)}
-              placeholder="メモがあれば入力してください"
+              placeholder={t("managerShifts.memoPlaceholder")}
               className="mt-2 min-h-20 w-full rounded-xl border border-slate-200 p-3 text-sm outline-none focus:border-emerald-500"
             />
 
@@ -529,19 +549,19 @@ export default function ManagerShiftsPage() {
                 disabled={!newEmployeeId || !newShift}
                 className="flex-1 rounded-xl bg-emerald-800 px-4 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300"
               >
-                保存する
+                {t("managerShifts.save")}
               </button>
               <button
                 type="button"
                 onClick={closeAddEditor}
                 className="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700"
               >
-                閉じる
+                {t("managerShifts.cancel")}
               </button>
             </div>
           </section>
         </div>
       ) : null}
-    </AppShell>
+    </>
   );
 }
