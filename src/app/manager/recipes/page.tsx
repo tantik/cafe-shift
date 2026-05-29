@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import AppShell from "@/components/app-shell";
+import { useI18n } from "@/lib/i18n/use-i18n";
 
 type RecipeFilter = "all" | "active" | "draft";
 
@@ -100,17 +101,26 @@ const emptyDraft: RecipeDraft = {
   active: true,
 };
 
-const filters: { id: RecipeFilter; label: string }[] = [
-  { id: "all", label: "すべて" },
-  { id: "active", label: "公開中" },
-  { id: "draft", label: "下書き" },
+const filters: { id: RecipeFilter; labelKey: string }[] = [
+  { id: "all", labelKey: "managerRecipes.filters.all" },
+  { id: "active", labelKey: "managerRecipes.filters.active" },
+  { id: "draft", labelKey: "managerRecipes.filters.draft" },
 ];
 
-function statusLabel(active: boolean) {
-  return active ? "公開中" : "下書き";
+function statusLabel(active: boolean, t: (key: string) => string) {
+  return active ? t("managerRecipes.status.published") : t("managerRecipes.status.draft");
 }
 
 export default function ManagerRecipesPage() {
+  return (
+    <AppShell variant="wide">
+      <ManagerRecipesContent />
+    </AppShell>
+  );
+}
+
+function ManagerRecipesContent() {
+  const { t } = useI18n();
   const [recipes, setRecipes] = useState(initialRecipes);
   const [query, setQuery] = useState("");
   const [selectedFilter, setSelectedFilter] = useState<RecipeFilter>("all");
@@ -177,27 +187,27 @@ export default function ManagerRecipesPage() {
   }
 
   return (
-    <AppShell variant="wide">
+    <>
       <div className="mx-auto max-w-4xl space-y-4 pb-8">
         <header className="rounded-2xl border border-emerald-100/70 bg-emerald-950/5 p-4 shadow-sm sm:p-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-xs font-semibold tracking-[0.18em] text-emerald-700/80">ドリンクレシピ</p>
-              <h1 className="mt-1 text-2xl font-bold text-slate-900">レシピ管理</h1>
-              <p className="mt-1 text-sm text-slate-600">スタッフが確認するドリンクレシピを管理できます</p>
+              <p className="text-xs font-semibold tracking-[0.18em] text-emerald-700/80">{t("managerRecipes.badge")}</p>
+              <h1 className="mt-1 text-2xl font-bold text-slate-900">{t("managerRecipes.title")}</h1>
+              <p className="mt-1 text-sm text-slate-600">{t("managerRecipes.subtitle")}</p>
             </div>
             <div className="inline-flex items-center self-start rounded-full bg-emerald-800 px-3 py-1.5 text-sm font-semibold text-white sm:self-auto">
-              店長 田中
+              {t("managerRecipes.managerChip")}
             </div>
           </div>
         </header>
 
         <section className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {[
-            { label: "登録レシピ", value: `${recipes.length}件` },
-            { label: "公開中", value: `${publishedCount}件` },
-            { label: "下書き", value: `${recipes.length - publishedCount}件` },
-            { label: "カテゴリ数", value: `${categoryCount}件` },
+            { label: t("managerRecipes.totalRecipes"), value: `${recipes.length}${t("managerRecipes.itemsSuffix")}` },
+            { label: t("managerRecipes.published"), value: `${publishedCount}${t("managerRecipes.itemsSuffix")}` },
+            { label: t("managerRecipes.draft"), value: `${recipes.length - publishedCount}${t("managerRecipes.itemsSuffix")}` },
+            { label: t("managerRecipes.categories"), value: `${categoryCount}${t("managerRecipes.itemsSuffix")}` },
           ].map((item) => (
             <div key={item.label} className="rounded-2xl border border-amber-100 bg-amber-50 p-3 shadow-sm">
               <p className="text-xs text-slate-500">{item.label}</p>
@@ -209,12 +219,12 @@ export default function ManagerRecipesPage() {
         <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:p-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <label className="flex-1">
-              <span className="sr-only">レシピ名で検索</span>
+              <span className="sr-only">{t("managerRecipes.searchLabel")}</span>
               <input
                 type="search"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="レシピ名で検索"
+                placeholder={t("managerRecipes.searchPlaceholder")}
                 className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none focus:border-emerald-600"
               />
             </label>
@@ -223,7 +233,7 @@ export default function ManagerRecipesPage() {
               onClick={openAddEditor}
               className="rounded-xl bg-emerald-800 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-900"
             >
-              レシピを追加
+              {t("managerRecipes.addRecipe")}
             </button>
           </div>
           <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
@@ -238,7 +248,7 @@ export default function ManagerRecipesPage() {
                     : "border-slate-200 bg-white text-slate-600 hover:border-emerald-300"
                 }`}
               >
-                {filter.label}
+                {t(filter.labelKey)}
               </button>
             ))}
           </div>
@@ -247,14 +257,14 @@ export default function ManagerRecipesPage() {
         <section className="space-y-3">
           {visibleRecipes.length === 0 ? (
             <div className="rounded-2xl border border-slate-200 bg-white p-5 text-center text-sm text-slate-500 shadow-sm">
-              条件に合うレシピはありません
+              {t("managerRecipes.emptyText")}
             </div>
           ) : (
             visibleRecipes.map((recipe) => (
               <article key={recipe.id} className="rounded-2xl border border-amber-100 bg-amber-50/70 p-3 shadow-sm sm:p-4">
                 <div className="flex gap-3">
                   <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-amber-200 bg-white text-xs font-semibold text-amber-800">
-                    写真
+                    {t("managerRecipes.photo")}
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
@@ -265,10 +275,10 @@ export default function ManagerRecipesPage() {
                           recipe.active ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"
                         }`}
                       >
-                        {statusLabel(recipe.active)}
+                        {statusLabel(recipe.active, t)}
                       </span>
                     </div>
-                    <p className="mt-1 text-sm text-slate-600">{recipe.description || "説明は未入力です"}</p>
+                    <p className="mt-1 text-sm text-slate-600">{recipe.description || t("managerRecipes.noDescription")}</p>
                   </div>
                 </div>
                 <div className="mt-3 flex flex-wrap justify-end gap-2">
@@ -277,14 +287,14 @@ export default function ManagerRecipesPage() {
                     onClick={() => openEditEditor(recipe)}
                     className="rounded-lg border border-emerald-200 bg-white px-3 py-1.5 text-sm font-semibold text-emerald-800"
                   >
-                    編集
+                    {t("managerRecipes.edit")}
                   </button>
                   <button
                     type="button"
                     onClick={() => toggleStatus(recipe.id)}
                     className="rounded-lg border border-amber-200 bg-white px-3 py-1.5 text-sm font-semibold text-amber-800"
                   >
-                    {recipe.active ? "下書きにする" : "公開する"}
+                    {recipe.active ? t("managerRecipes.makeDraft") : t("managerRecipes.publish")}
                   </button>
                 </div>
               </article>
@@ -293,15 +303,15 @@ export default function ManagerRecipesPage() {
         </section>
 
         <section className="rounded-2xl border border-emerald-100 bg-emerald-50/60 p-4 shadow-sm">
-          <p className="font-semibold text-slate-900">スタッフ画面との関係</p>
-          <p className="mt-1 text-sm text-slate-600">公開中のレシピはスタッフのレシピ画面に表示される想定です。</p>
+          <p className="font-semibold text-slate-900">{t("managerRecipes.staffRelationTitle")}</p>
+          <p className="mt-1 text-sm text-slate-600">{t("managerRecipes.staffRelationText")}</p>
           <Link href="/recipes" className="mt-3 inline-flex text-sm font-semibold text-emerald-800 hover:text-emerald-950">
-            スタッフ用レシピを見る →
+            {t("managerRecipes.openWorkerRecipes")}
           </Link>
         </section>
 
         <p className="rounded-2xl border border-slate-200 bg-white/90 px-4 py-3 text-sm text-slate-600 shadow-sm">
-          この画面はデモです。実際の保存と写真アップロードは後でSupabase Storageに接続します。
+          {t("managerRecipes.demoNote")}
         </p>
       </div>
 
@@ -310,9 +320,9 @@ export default function ManagerRecipesPage() {
           <section className="max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-2xl border border-amber-100 bg-white p-4 shadow-xl sm:p-5">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-semibold text-emerald-700">{editingId === null ? "新規登録" : "編集"}</p>
+                <p className="text-xs font-semibold text-emerald-700">{editingId === null ? t("managerRecipes.modal.newBadge") : t("managerRecipes.modal.editBadge")}</p>
                 <h2 className="mt-1 text-xl font-bold text-slate-900">
-                  {editingId === null ? "レシピを追加" : "レシピを編集"}
+                  {editingId === null ? t("managerRecipes.modal.addTitle") : t("managerRecipes.modal.editTitle")}
                 </h2>
               </div>
               <span
@@ -320,13 +330,13 @@ export default function ManagerRecipesPage() {
                   draft.active ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"
                 }`}
               >
-                {statusLabel(draft.active)}
+                {statusLabel(draft.active, t)}
               </span>
             </div>
 
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <label className="text-sm font-medium text-slate-700">
-                レシピ名
+                {t("managerRecipes.fields.title")}
                 <input
                   value={draft.title}
                   onChange={(event) => updateDraft("title", event.target.value)}
@@ -334,7 +344,7 @@ export default function ManagerRecipesPage() {
                 />
               </label>
               <label className="text-sm font-medium text-slate-700">
-                カテゴリ
+                {t("managerRecipes.fields.category")}
                 <input
                   value={draft.category}
                   onChange={(event) => updateDraft("category", event.target.value)}
@@ -345,7 +355,7 @@ export default function ManagerRecipesPage() {
 
             <div className="mt-3 space-y-3">
               <label className="block text-sm font-medium text-slate-700">
-                短い説明
+                {t("managerRecipes.fields.description")}
                 <input
                   value={draft.description}
                   onChange={(event) => updateDraft("description", event.target.value)}
@@ -353,36 +363,36 @@ export default function ManagerRecipesPage() {
                 />
               </label>
               <label className="block text-sm font-medium text-slate-700">
-                写真メモ
+                {t("managerRecipes.fields.photoMemo")}
                 <input
                   value={draft.photoMemo}
                   onChange={(event) => updateDraft("photoMemo", event.target.value)}
-                  placeholder="写真アップロードは後で追加します"
+                  placeholder={t("managerRecipes.placeholders.photoMemo")}
                   className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-emerald-600"
                 />
               </label>
               <label className="block text-sm font-medium text-slate-700">
-                材料
+                {t("managerRecipes.fields.ingredients")}
                 <textarea
                   value={draft.ingredients}
                   onChange={(event) => updateDraft("ingredients", event.target.value)}
-                  placeholder="例）牛乳160g、シロップ10g"
+                  placeholder={t("managerRecipes.placeholders.ingredients")}
                   rows={3}
                   className="mt-1 w-full resize-none rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-emerald-600"
                 />
               </label>
               <label className="block text-sm font-medium text-slate-700">
-                作り方
+                {t("managerRecipes.fields.steps")}
                 <textarea
                   value={draft.steps}
                   onChange={(event) => updateDraft("steps", event.target.value)}
-                  placeholder="1行ずつ手順を入力してください"
+                  placeholder={t("managerRecipes.placeholders.steps")}
                   rows={3}
                   className="mt-1 w-full resize-none rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-emerald-600"
                 />
               </label>
               <label className="block text-sm font-medium text-slate-700">
-                追加メモ
+                {t("managerRecipes.fields.notes")}
                 <textarea
                   value={draft.notes}
                   onChange={(event) => updateDraft("notes", event.target.value)}
@@ -393,7 +403,7 @@ export default function ManagerRecipesPage() {
             </div>
 
             <div className="mt-4">
-              <p className="text-sm font-medium text-slate-700">ステータス</p>
+              <p className="text-sm font-medium text-slate-700">{t("managerRecipes.fields.status")}</p>
               <div className="mt-2 flex gap-2">
                 {[true, false].map((active) => (
                   <button
@@ -406,7 +416,7 @@ export default function ManagerRecipesPage() {
                         : "border-slate-200 text-slate-600"
                     }`}
                   >
-                    {statusLabel(active)}
+                    {statusLabel(active, t)}
                   </button>
                 ))}
               </div>
@@ -419,19 +429,19 @@ export default function ManagerRecipesPage() {
                 disabled={!draft.title.trim() || !draft.category.trim()}
                 className="flex-1 rounded-xl bg-emerald-800 px-4 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300"
               >
-                保存する
+                {t("managerRecipes.actions.save")}
               </button>
               <button
                 type="button"
                 onClick={closeEditor}
                 className="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700"
               >
-                閉じる
+                {t("managerRecipes.actions.close")}
               </button>
             </div>
           </section>
         </div>
       ) : null}
-    </AppShell>
+    </>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import AppShell from "@/components/app-shell";
+import { useI18n } from "@/lib/i18n/use-i18n";
 
 type EmployeeFilter = "all" | "active" | "inactive" | "unlinked";
 
@@ -39,14 +40,23 @@ const emptyDraft: EmployeeDraft = {
   memo: "",
 };
 
-const filters: { id: EmployeeFilter; label: string }[] = [
-  { id: "all", label: "すべて" },
-  { id: "active", label: "勤務中" },
-  { id: "inactive", label: "休止中" },
-  { id: "unlinked", label: "LINE未連携" },
+const filters: { id: EmployeeFilter; labelKey: string }[] = [
+  { id: "all", labelKey: "managerEmployees.filters.all" },
+  { id: "active", labelKey: "managerEmployees.filters.active" },
+  { id: "inactive", labelKey: "managerEmployees.filters.inactive" },
+  { id: "unlinked", labelKey: "managerEmployees.filters.unlinked" },
 ];
 
 export default function ManagerEmployeesPage() {
+  return (
+    <AppShell variant="wide">
+      <ManagerEmployeesContent />
+    </AppShell>
+  );
+}
+
+function ManagerEmployeesContent() {
+  const { t } = useI18n();
   const [employees, setEmployees] = useState<Employee[]>(initialEmployees);
   const [query, setQuery] = useState("");
   const [selectedFilter, setSelectedFilter] = useState<EmployeeFilter>("all");
@@ -123,37 +133,37 @@ export default function ManagerEmployeesPage() {
   }
 
   return (
-    <AppShell variant="wide">
+    <>
       <div className="mx-auto max-w-4xl space-y-4 pb-8">
         <header className="rounded-2xl border border-emerald-100 bg-gradient-to-r from-emerald-50 to-amber-50 p-4 shadow-sm">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-xs font-semibold tracking-[0.18em] text-emerald-700">スタッフ情報</p>
-              <h1 className="mt-1 text-2xl font-bold text-slate-900">スタッフ管理</h1>
-              <p className="mt-1 text-sm text-slate-600">スタッフ情報と勤務ステータスを管理できます</p>
+              <p className="text-xs font-semibold tracking-[0.18em] text-emerald-700">{t("managerEmployees.badge")}</p>
+              <h1 className="mt-1 text-2xl font-bold text-slate-900">{t("managerEmployees.title")}</h1>
+              <p className="mt-1 text-sm text-slate-600">{t("managerEmployees.subtitle")}</p>
             </div>
             <span className="inline-flex self-start rounded-full bg-emerald-800 px-3 py-1.5 text-sm font-semibold text-white sm:self-auto">
-              店長 田中
+              {t("managerEmployees.managerChip")}
             </span>
           </div>
         </header>
 
         <section className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
-            <p className="text-xs text-slate-500">登録スタッフ</p>
-            <p className="mt-1 text-xl font-bold text-slate-900">{employees.length}名</p>
+            <p className="text-xs text-slate-500">{t("managerEmployees.totalStaff")}</p>
+            <p className="mt-1 text-xl font-bold text-slate-900">{employees.length}{t("managerEmployees.peopleSuffix")}</p>
           </div>
           <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
-            <p className="text-xs text-slate-500">勤務中</p>
-            <p className="mt-1 text-xl font-bold text-emerald-800">{activeCount}名</p>
+            <p className="text-xs text-slate-500">{t("managerEmployees.activeStaff")}</p>
+            <p className="mt-1 text-xl font-bold text-emerald-800">{activeCount}{t("managerEmployees.peopleSuffix")}</p>
           </div>
           <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
-            <p className="text-xs text-slate-500">休止中</p>
-            <p className="mt-1 text-xl font-bold text-amber-800">{inactiveCount}名</p>
+            <p className="text-xs text-slate-500">{t("managerEmployees.inactiveStaff")}</p>
+            <p className="mt-1 text-xl font-bold text-amber-800">{inactiveCount}{t("managerEmployees.peopleSuffix")}</p>
           </div>
           <div className="rounded-xl border border-slate-200 bg-slate-950/5 p-3 shadow-sm">
-            <p className="text-xs text-slate-500">LINE未連携</p>
-            <p className="mt-1 text-xl font-bold text-slate-900">{unlinkedCount}名</p>
+            <p className="text-xs text-slate-500">{t("managerEmployees.unlinkedStaff")}</p>
+            <p className="mt-1 text-xl font-bold text-slate-900">{unlinkedCount}{t("managerEmployees.peopleSuffix")}</p>
           </div>
         </section>
 
@@ -163,7 +173,7 @@ export default function ManagerEmployeesPage() {
               type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="名前で検索"
+              placeholder={t("managerEmployees.searchPlaceholder")}
               className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-emerald-500"
             />
             <button
@@ -171,7 +181,7 @@ export default function ManagerEmployeesPage() {
               onClick={openAddEditor}
               className="rounded-xl bg-emerald-800 px-4 py-2 text-sm font-semibold text-white"
             >
-              スタッフを追加
+              {t("managerEmployees.addStaff")}
             </button>
           </div>
           <div className="mt-2 flex gap-2 overflow-x-auto pb-0.5">
@@ -186,7 +196,7 @@ export default function ManagerEmployeesPage() {
                     : "border-slate-200 bg-white text-slate-600"
                 }`}
               >
-                {filter.label}
+                {t(filter.labelKey)}
               </button>
             ))}
           </div>
@@ -194,13 +204,13 @@ export default function ManagerEmployeesPage() {
 
         <section className="space-y-2.5">
           <div className="flex items-center justify-between">
-            <h2 className="font-semibold text-slate-900">スタッフ一覧</h2>
-            <p className="text-sm text-slate-500">{visibleEmployees.length}名</p>
+            <h2 className="font-semibold text-slate-900">{t("managerEmployees.staffListTitle")}</h2>
+            <p className="text-sm text-slate-500">{visibleEmployees.length}{t("managerEmployees.peopleSuffix")}</p>
           </div>
 
           {visibleEmployees.length === 0 ? (
             <p className="rounded-xl border border-slate-200 bg-white p-5 text-center text-sm text-slate-500 shadow-sm">
-              条件に合うスタッフはいません。
+              {t("managerEmployees.emptyText")}
             </p>
           ) : (
             visibleEmployees.map((employee) => (
@@ -217,20 +227,20 @@ export default function ManagerEmployeesPage() {
                           employee.active ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-700"
                         }`}
                       >
-                        {employee.active ? "勤務中" : "休止中"}
+                        {employee.active ? t("managerEmployees.status.active") : t("managerEmployees.status.inactive")}
                       </span>
                       <span
                         className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
                           employee.lineUserId ? "bg-sky-100 text-sky-800" : "bg-amber-100 text-amber-800"
                         }`}
                       >
-                        {employee.lineUserId ? "連携済み" : "未連携"}
+                        {employee.lineUserId ? t("managerEmployees.line.linked") : t("managerEmployees.line.unlinked")}
                       </span>
                     </div>
                     <p className="mt-0.5 text-sm text-slate-600">
                       {employee.familyName} {employee.givenName}
                     </p>
-                    {employee.memo ? <p className="mt-1 text-xs text-slate-500">メモ: {employee.memo}</p> : null}
+                    {employee.memo ? <p className="mt-1 text-xs text-slate-500">{t("managerEmployees.memo")}: {employee.memo}</p> : null}
                   </div>
                 </div>
                 <div className="mt-2.5 flex justify-end gap-2">
@@ -239,14 +249,14 @@ export default function ManagerEmployeesPage() {
                     onClick={() => openEditEditor(employee)}
                     className="rounded-lg border border-emerald-200 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-800"
                   >
-                    編集
+                    {t("managerEmployees.edit")}
                   </button>
                   <button
                     type="button"
                     onClick={() => toggleEmployeeStatus(employee.id)}
                     className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700"
                   >
-                    {employee.active ? "休止にする" : "勤務中に戻す"}
+                    {employee.active ? t("managerEmployees.deactivate") : t("managerEmployees.activate")}
                   </button>
                 </div>
               </article>
@@ -255,30 +265,28 @@ export default function ManagerEmployeesPage() {
         </section>
 
         <section className="rounded-xl border border-amber-100 bg-amber-50 p-3 shadow-sm">
-          <h2 className="font-semibold text-slate-900">LINE連携について</h2>
-          <p className="mt-1 text-sm text-slate-600">
-            LINE User ID は後でLIFF連携時に自動取得できるようにします。MVPでは手動入力または未連携でも問題ありません。
-          </p>
+          <h2 className="font-semibold text-slate-900">{t("managerEmployees.lineInfoTitle")}</h2>
+          <p className="mt-1 text-sm text-slate-600">{t("managerEmployees.lineInfoText")}</p>
         </section>
 
         <p className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-600 shadow-sm">
-          この画面はデモです。実際の保存は後でSupabaseに接続します。
+          {t("managerEmployees.demoNote")}
         </p>
       </div>
 
       {isEditorOpen ? (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/35 p-3 sm:items-center">
-          <section className="w-full max-w-lg rounded-2xl bg-white p-4 shadow-xl" role="dialog" aria-modal="true" aria-label="スタッフ情報を編集">
+          <section className="w-full max-w-lg rounded-2xl bg-white p-4 shadow-xl" role="dialog" aria-modal="true" aria-label={editingId === null ? t("managerEmployees.modal.addTitle") : t("managerEmployees.modal.editTitle")}>
             <div className="flex items-start justify-between gap-3">
-              <h2 className="text-lg font-bold text-slate-900">{editingId === null ? "スタッフを追加" : "スタッフを編集"}</h2>
+              <h2 className="text-lg font-bold text-slate-900">{editingId === null ? t("managerEmployees.modal.addTitle") : t("managerEmployees.modal.editTitle")}</h2>
               <button type="button" onClick={closeEditor} className="rounded-lg px-2 py-1 text-sm text-slate-500">
-                閉じる
+                {t("managerEmployees.actions.close")}
               </button>
             </div>
 
             <div className="mt-4 grid grid-cols-2 gap-2">
               <label className="text-sm font-semibold text-slate-700">
-                姓
+                {t("managerEmployees.fields.familyName")}
                 <input
                   value={draft.familyName}
                   onChange={(event) => updateDraft("familyName", event.target.value)}
@@ -286,7 +294,7 @@ export default function ManagerEmployeesPage() {
                 />
               </label>
               <label className="text-sm font-semibold text-slate-700">
-                名
+                {t("managerEmployees.fields.givenName")}
                 <input
                   value={draft.givenName}
                   onChange={(event) => updateDraft("givenName", event.target.value)}
@@ -294,7 +302,7 @@ export default function ManagerEmployeesPage() {
                 />
               </label>
               <label className="text-sm font-semibold text-slate-700">
-                表示名
+                {t("managerEmployees.fields.displayName")}
                 <input
                   value={draft.displayName}
                   onChange={(event) => updateDraft("displayName", event.target.value)}
@@ -302,7 +310,7 @@ export default function ManagerEmployeesPage() {
                 />
               </label>
               <label className="text-sm font-semibold text-slate-700">
-                イニシャル
+                {t("managerEmployees.fields.initials")}
                 <input
                   value={draft.initials}
                   onChange={(event) => updateDraft("initials", event.target.value)}
@@ -312,7 +320,7 @@ export default function ManagerEmployeesPage() {
             </div>
 
             <label className="mt-3 block text-sm font-semibold text-slate-700">
-              LINE User ID
+              {t("managerEmployees.fields.lineUserId")}
               <input
                 value={draft.lineUserId}
                 onChange={(event) => updateDraft("lineUserId", event.target.value)}
@@ -320,11 +328,11 @@ export default function ManagerEmployeesPage() {
               />
             </label>
 
-            <p className="mt-3 text-sm font-semibold text-slate-700">ステータス</p>
+            <p className="mt-3 text-sm font-semibold text-slate-700">{t("managerEmployees.fields.status")}</p>
             <div className="mt-1.5 grid grid-cols-2 gap-2">
               {[
-                { active: true, label: "勤務中" },
-                { active: false, label: "休止中" },
+                { active: true, label: t("managerEmployees.status.active") },
+                { active: false, label: t("managerEmployees.status.inactive") },
               ].map((status) => (
                 <button
                   key={status.label}
@@ -342,7 +350,7 @@ export default function ManagerEmployeesPage() {
             </div>
 
             <label className="mt-3 block text-sm font-semibold text-slate-700">
-              メモ
+              {t("managerEmployees.fields.memo")}
               <textarea
                 value={draft.memo}
                 onChange={(event) => updateDraft("memo", event.target.value)}
@@ -357,19 +365,19 @@ export default function ManagerEmployeesPage() {
                 disabled={!draft.familyName.trim() || !draft.givenName.trim() || !draft.displayName.trim() || !draft.initials.trim()}
                 className="flex-1 rounded-xl bg-emerald-800 px-4 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300"
               >
-                保存する
+                {t("managerEmployees.actions.save")}
               </button>
               <button
                 type="button"
                 onClick={closeEditor}
                 className="flex-1 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700"
               >
-                閉じる
+                {t("managerEmployees.actions.close")}
               </button>
             </div>
           </section>
         </div>
       ) : null}
-    </AppShell>
+    </>
   );
 }

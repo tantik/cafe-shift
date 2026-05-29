@@ -2,9 +2,10 @@
 
 import { useMemo, useState } from "react";
 import AppShell from "@/components/app-shell";
+import { useI18n } from "@/lib/i18n/use-i18n";
 
-type SuggestionStatus = "未確認" | "確認済み" | "採用" | "保留";
-type Filter = "すべて" | SuggestionStatus;
+type SuggestionStatus = "unchecked" | "reviewed" | "accepted" | "hold";
+type Filter = "all" | SuggestionStatus;
 
 type Suggestion = {
   id: string;
@@ -26,7 +27,7 @@ const initialSuggestions: Suggestion[] = [
     title: "抹茶ゆずラテの提案",
     content: "夏向けにさっぱりした抹茶ドリンクを追加できると良さそうです。",
     priority: "通常",
-    status: "未確認",
+    status: "unchecked",
   },
   {
     id: "manager-suggestion-2",
@@ -36,7 +37,7 @@ const initialSuggestions: Suggestion[] = [
     title: "仕込みチェックリストを作りたい",
     content: "朝の仕込み内容を確認できる紙か画面があるとミスが減りそうです。",
     priority: "できれば早め",
-    status: "確認済み",
+    status: "reviewed",
   },
   {
     id: "manager-suggestion-3",
@@ -46,7 +47,7 @@ const initialSuggestions: Suggestion[] = [
     title: "冷蔵庫の在庫確認が重複しています",
     content: "同じ在庫を複数人が確認している日があります。担当を決めたいです。",
     priority: "重要",
-    status: "未確認",
+    status: "unchecked",
   },
   {
     id: "manager-suggestion-4",
@@ -56,19 +57,40 @@ const initialSuggestions: Suggestion[] = [
     title: "朝の清掃手順を共有したい",
     content: "新人スタッフ向けに朝の清掃手順をまとめると良いと思います。",
     priority: "通常",
-    status: "保留",
+    status: "hold",
   },
 ];
 
-const filters: Filter[] = ["すべて", "未確認", "確認済み", "採用", "保留"];
-const statuses: SuggestionStatus[] = ["未確認", "確認済み", "採用", "保留"];
+const filters: { id: Filter; labelKey: string }[] = [
+  { id: "all", labelKey: "managerSuggestions.filters.all" },
+  { id: "unchecked", labelKey: "managerSuggestions.status.unchecked" },
+  { id: "reviewed", labelKey: "managerSuggestions.status.reviewed" },
+  { id: "accepted", labelKey: "managerSuggestions.status.accepted" },
+  { id: "hold", labelKey: "managerSuggestions.status.hold" },
+];
+const statuses: SuggestionStatus[] = ["unchecked", "reviewed", "accepted", "hold"];
+const statusLabelKeys: Record<SuggestionStatus, string> = {
+  unchecked: "managerSuggestions.status.unchecked",
+  reviewed: "managerSuggestions.status.reviewed",
+  accepted: "managerSuggestions.status.accepted",
+  hold: "managerSuggestions.status.hold",
+};
 
 export default function ManagerSuggestionsPage() {
+  return (
+    <AppShell variant="wide">
+      <ManagerSuggestionsContent />
+    </AppShell>
+  );
+}
+
+function ManagerSuggestionsContent() {
+  const { t } = useI18n();
   const [suggestions, setSuggestions] = useState(initialSuggestions);
-  const [filter, setFilter] = useState<Filter>("すべて");
+  const [filter, setFilter] = useState<Filter>("all");
 
   const visibleSuggestions =
-    filter === "すべて" ? suggestions : suggestions.filter((suggestion) => suggestion.status === filter);
+    filter === "all" ? suggestions : suggestions.filter((suggestion) => suggestion.status === filter);
   const counts = useMemo(
     () =>
       statuses.map((status) => ({
@@ -85,17 +107,17 @@ export default function ManagerSuggestionsPage() {
   }
 
   return (
-    <AppShell variant="wide">
+    <>
       <div className="mx-auto max-w-4xl space-y-4 pb-8">
         <header className="rounded-2xl border border-emerald-100 bg-gradient-to-r from-emerald-50 to-amber-50 p-4 shadow-sm sm:p-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-xs font-semibold tracking-[0.16em] text-emerald-700">提案・改善</p>
-              <h1 className="mt-1 text-2xl font-bold text-slate-900">提案・改善</h1>
-              <p className="mt-1 text-sm text-slate-600">スタッフからの提案や改善アイデアを確認できます</p>
+              <p className="text-xs font-semibold tracking-[0.16em] text-emerald-700">{t("managerSuggestions.badge")}</p>
+              <h1 className="mt-1 text-2xl font-bold text-slate-900">{t("managerSuggestions.title")}</h1>
+              <p className="mt-1 text-sm text-slate-600">{t("managerSuggestions.subtitle")}</p>
             </div>
             <span className="inline-flex self-start rounded-full bg-emerald-800 px-3 py-1.5 text-sm font-semibold text-white sm:self-auto">
-              店長 田中
+              {t("managerSuggestions.managerChip")}
             </span>
           </div>
         </header>
@@ -103,8 +125,8 @@ export default function ManagerSuggestionsPage() {
         <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {counts.map((item) => (
             <div key={item.status} className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-              <p className="text-xs text-slate-500">{item.status}</p>
-              <p className="mt-1 text-xl font-bold text-slate-900">{item.count}件</p>
+              <p className="text-xs text-slate-500">{t(statusLabelKeys[item.status])}</p>
+              <p className="mt-1 text-xl font-bold text-slate-900">{item.count}{t("managerSuggestions.itemsSuffix")}</p>
             </div>
           ))}
         </section>
@@ -113,14 +135,14 @@ export default function ManagerSuggestionsPage() {
           <div className="flex min-w-max gap-2">
             {filters.map((item) => (
               <button
-                key={item}
+                key={item.id}
                 type="button"
-                onClick={() => setFilter(item)}
+                onClick={() => setFilter(item.id)}
                 className={`rounded-xl px-3 py-2 text-sm font-semibold ${
-                  filter === item ? "bg-emerald-800 text-white" : "bg-slate-50 text-slate-700"
+                  filter === item.id ? "bg-emerald-800 text-white" : "bg-slate-50 text-slate-700"
                 }`}
               >
-                {item}
+                {t(item.labelKey)}
               </button>
             ))}
           </div>
@@ -143,7 +165,7 @@ export default function ManagerSuggestionsPage() {
                       {suggestion.priority}
                     </span>
                     <span className="rounded-full bg-slate-50 px-2 py-1 text-xs font-semibold text-slate-700">
-                      {suggestion.status}
+                      {t(statusLabelKeys[suggestion.status])}
                     </span>
                   </div>
                   <h2 className="mt-2 font-semibold text-slate-900">{suggestion.title}</h2>
@@ -151,24 +173,24 @@ export default function ManagerSuggestionsPage() {
                   <div className="mt-3 flex flex-wrap gap-2">
                     <button
                       type="button"
-                      onClick={() => updateStatus(suggestion.id, "確認済み")}
+                      onClick={() => updateStatus(suggestion.id, "reviewed")}
                       className="rounded-xl border border-emerald-200 bg-white px-3 py-2 text-sm font-semibold text-emerald-800"
                     >
-                      確認済みにする
+                      {t("managerSuggestions.actions.markReviewed")}
                     </button>
                     <button
                       type="button"
-                      onClick={() => updateStatus(suggestion.id, "採用")}
+                      onClick={() => updateStatus(suggestion.id, "accepted")}
                       className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800"
                     >
-                      採用
+                      {t("managerSuggestions.actions.accept")}
                     </button>
                     <button
                       type="button"
-                      onClick={() => updateStatus(suggestion.id, "保留")}
+                      onClick={() => updateStatus(suggestion.id, "hold")}
                       className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700"
                     >
-                      保留
+                      {t("managerSuggestions.actions.hold")}
                     </button>
                   </div>
                 </div>
@@ -178,13 +200,13 @@ export default function ManagerSuggestionsPage() {
         </section>
 
         <section className="rounded-2xl border border-amber-100 bg-amber-50 p-4 text-sm text-slate-700 shadow-sm">
-          採用した提案は、後でレシピ管理や業務改善タスクに反映できます。
+          {t("managerSuggestions.acceptedNote")}
         </section>
 
         <p className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 shadow-sm">
-          この画面はデモです。実際の保存は後でSupabaseに接続します。
+          {t("managerSuggestions.demoNote")}
         </p>
       </div>
-    </AppShell>
+    </>
   );
 }
