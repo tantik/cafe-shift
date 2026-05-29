@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import AppShell from "@/components/app-shell";
+import { useI18n } from "@/lib/i18n/use-i18n";
 
 type ReportStatus = "unreviewed" | "reviewed";
 type Filter = "all" | ReportStatus;
@@ -80,10 +81,10 @@ const initialReports: TimeReport[] = [
   },
 ];
 
-const filters: { id: Filter; label: string }[] = [
-  { id: "all", label: "すべて" },
-  { id: "unreviewed", label: "未確認" },
-  { id: "reviewed", label: "確認済み" },
+const filters: { id: Filter; labelKey: string }[] = [
+  { id: "all", labelKey: "managerTimeReports.filters.all" },
+  { id: "unreviewed", labelKey: "managerTimeReports.filters.unreviewed" },
+  { id: "reviewed", labelKey: "managerTimeReports.filters.reviewed" },
 ];
 
 function timeToMinutes(value: string) {
@@ -100,15 +101,26 @@ function formatHours(minutes: number) {
   return `${Number.isInteger(hours) ? hours : hours.toFixed(1)}h`;
 }
 
-function formatBreak(minutes: number) {
-  return minutes === 0 ? "なし" : `${minutes}分`;
+function formatBreak(minutes: number, noneLabel: string) {
+  return minutes === 0 ? noneLabel : `${minutes}分`;
 }
 
-function statusLabel(status: ReportStatus) {
-  return status === "reviewed" ? "確認済み" : "未確認";
+function statusLabel(status: ReportStatus, t: (key: string) => string) {
+  return status === "reviewed"
+    ? t("managerTimeReports.status.reviewed")
+    : t("managerTimeReports.status.unreviewed");
 }
 
 export default function ManagerTimeReportsPage() {
+  return (
+    <AppShell variant="wide">
+      <ManagerTimeReportsContent />
+    </AppShell>
+  );
+}
+
+function ManagerTimeReportsContent() {
+  const { t } = useI18n();
   const [reports, setReports] = useState(initialReports);
   const [filter, setFilter] = useState<Filter>("all");
 
@@ -132,26 +144,25 @@ export default function ManagerTimeReportsPage() {
   }
 
   return (
-    <AppShell variant="wide">
       <div className="mx-auto max-w-4xl space-y-4 pb-8">
         <header className="rounded-2xl border border-emerald-100 bg-gradient-to-r from-emerald-50 to-amber-50 p-4 shadow-sm sm:p-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-xs font-semibold tracking-[0.16em] text-emerald-700">勤務報告</p>
-              <h1 className="mt-1 text-2xl font-bold text-slate-900">勤務報告</h1>
-              <p className="mt-1 text-sm text-slate-600">スタッフの出勤・退勤・休憩・交通費と延長勤務を確認できます</p>
+              <p className="text-xs font-semibold tracking-[0.16em] text-emerald-700">{t("managerTimeReports.title")}</p>
+              <h1 className="mt-1 text-2xl font-bold text-slate-900">{t("managerTimeReports.title")}</h1>
+              <p className="mt-1 text-sm text-slate-600">{t("managerTimeReports.subtitle")}</p>
             </div>
             <span className="inline-flex self-start rounded-full bg-emerald-800 px-3 py-1.5 text-sm font-semibold text-white sm:self-auto">
-              店長 田中
+              {t("managerTimeReports.managerChip")}
             </span>
           </div>
         </header>
 
         <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {[
-            { label: "報告件数", value: `${summary.count}件` },
-            { label: "未確認", value: `${summary.unreviewed}件` },
-            { label: "延長勤務", value: `${summary.extendedWork}件` },
+            { label: t("managerTimeReports.summary.reportCount"), value: `${summary.count}件` },
+            { label: t("managerTimeReports.summary.unreviewed"), value: `${summary.unreviewed}件` },
+            { label: t("managerTimeReports.summary.extendedWork"), value: `${summary.extendedWork}件` },
           ].map((item) => (
             <div key={item.label} className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
               <p className="text-xs text-slate-500">{item.label}</p>
@@ -163,18 +174,18 @@ export default function ManagerTimeReportsPage() {
         <section className="rounded-2xl border border-amber-100 bg-amber-50 p-4 shadow-sm">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <h2 className="font-semibold text-slate-900">勤務時間サマリー</h2>
+              <h2 className="font-semibold text-slate-900">{t("managerTimeReports.summaryTitle")}</h2>
               <p className="mt-1 text-sm text-slate-600">
-                勤務時間は報告内容の確認用です。給与計算・法定残業計算はMVPでは行いません。
+                {t("managerTimeReports.note.text")}
               </p>
             </div>
           </div>
           <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
             {[
-              { label: "実働時間合計", value: summary.totalHours },
-              { label: "休憩時間合計", value: summary.breakHours },
-              { label: "交通費合計", value: `${summary.transport.toLocaleString()}円` },
-              { label: "未確認レポート", value: `${summary.unreviewed}件` },
+              { label: t("managerTimeReports.summary.totalActualHours"), value: summary.totalHours },
+              { label: t("managerTimeReports.summary.totalBreakHours"), value: summary.breakHours },
+              { label: t("managerTimeReports.summary.totalTransportCost"), value: `${summary.transport.toLocaleString()}円` },
+              { label: t("managerTimeReports.summary.unreviewed"), value: `${summary.unreviewed}件` },
             ].map((item) => (
               <div key={item.label} className="rounded-xl border border-amber-100 bg-white px-3 py-2.5 shadow-sm">
                 <p className="text-xs text-slate-500">{item.label}</p>
@@ -195,13 +206,14 @@ export default function ManagerTimeReportsPage() {
                   filter === item.id ? "bg-emerald-800 text-white" : "bg-slate-50 text-slate-700"
                 }`}
               >
-                {item.label}
+                {t(item.labelKey)}
               </button>
             ))}
           </div>
         </section>
 
         <section className="space-y-3">
+          <h2 className="text-lg font-semibold text-slate-900">{t("managerTimeReports.reportListTitle")}</h2>
           {visibleReports.map((report) => (
             <article key={report.id} className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:p-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -218,32 +230,41 @@ export default function ManagerTimeReportsPage() {
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="rounded-full bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-800">
-                    実働 {formatHours(actualMinutes(report))}
+                    {t("managerTimeReports.fields.actualHours")} {formatHours(actualMinutes(report))}
                   </span>
                   <span className="rounded-full bg-slate-50 px-2 py-1 text-xs font-semibold text-slate-700">
-                    {statusLabel(report.status)}
+                    {statusLabel(report.status, t)}
                   </span>
                   {report.hasExtendedWork ? (
                     <span className="rounded-full bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-800">
-                      予定より長く勤務
+                      {t("managerTimeReports.fields.extendedWork")}
                     </span>
                   ) : null}
                   {report.hasExtendedWork && report.status === "unreviewed" ? (
                     <span className="rounded-full bg-rose-50 px-2 py-1 text-xs font-semibold text-rose-700">
-                      要確認
+                      {t("managerTimeReports.status.needsCheck")}
                     </span>
                   ) : null}
                 </div>
               </div>
               <div className="mt-3 grid gap-2 text-sm text-slate-600 sm:grid-cols-3">
-                <p>休憩 {formatBreak(report.breakMinutes)}</p>
-                <p>交通費 {report.transportCost.toLocaleString()}円</p>
-                <p className="truncate">メモ {report.memo || "なし"}</p>
+                <p>
+                  {t("managerTimeReports.fields.break")} {formatBreak(report.breakMinutes, t("managerTimeReports.status.none"))}
+                </p>
+                <p>
+                  {t("managerTimeReports.fields.transportCost")} {report.transportCost.toLocaleString()}円
+                </p>
+                <p className="truncate">
+                  {t("managerTimeReports.fields.memo")} {report.memo || t("managerTimeReports.status.none")}
+                </p>
               </div>
               {report.hasExtendedWork ? (
                 <div className="mt-3 rounded-xl border border-amber-100 bg-amber-50 px-3 py-2 text-sm text-slate-700">
-                  <p className="font-semibold text-amber-900">予定より長く勤務</p>
-                  <p className="mt-1">理由: {report.extendedWorkReason || "未入力"}</p>
+                  <p className="font-semibold text-amber-900">{t("managerTimeReports.fields.extendedWork")}</p>
+                  <p className="mt-1">
+                    {t("managerTimeReports.fields.extendedWorkReason")}:{" "}
+                    {report.extendedWorkReason || t("managerTimeReports.status.notEntered")}
+                  </p>
                 </div>
               ) : null}
               <div className="mt-3 text-right">
@@ -253,10 +274,10 @@ export default function ManagerTimeReportsPage() {
                     onClick={() => markReviewed(report.id)}
                     className="rounded-xl bg-emerald-800 px-3 py-2 text-sm font-semibold text-white"
                   >
-                    確認済みにする
+                    {t("managerTimeReports.actions.markReviewed")}
                   </button>
                 ) : (
-                  <span className="text-sm font-semibold text-emerald-700">確認済み</span>
+                  <span className="text-sm font-semibold text-emerald-700">{t("managerTimeReports.status.reviewed")}</span>
                 )}
               </div>
             </article>
@@ -264,13 +285,13 @@ export default function ManagerTimeReportsPage() {
         </section>
 
         <section className="rounded-2xl border border-amber-100 bg-amber-50 p-4 text-sm text-slate-700 shadow-sm">
-          交通費は申告内容の確認用です。精算・給与計算はMVPでは行いません。
+          <p className="font-semibold text-slate-900">{t("managerTimeReports.note.title")}</p>
+          <p className="mt-1">{t("managerTimeReports.note.text")}</p>
         </section>
 
         <p className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 shadow-sm">
-          この画面はデモです。実際の保存は後でSupabaseに接続します。
+          {t("managerTimeReports.demoNote")}
         </p>
       </div>
-    </AppShell>
   );
 }
