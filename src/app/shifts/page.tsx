@@ -284,18 +284,20 @@ export default function ShiftsPage() {
         )}
 
         <section className="grid grid-cols-2 gap-2">
-          <Link
-            href="/requests"
-            className="rounded-xl border border-emerald-200 bg-white px-3 py-3 text-center text-sm font-semibold text-emerald-800 shadow-sm"
-          >
-            シフト希望を出す
-          </Link>
-          <Link
-            href="/overtime"
-            className="rounded-xl border border-amber-200 bg-white px-3 py-3 text-center text-sm font-semibold text-amber-800 shadow-sm"
-          >
-            残業申請
-          </Link>
+          {[
+            { href: "/requests", label: "シフト希望" },
+            { href: "/overtime", label: "残業申請" },
+            { href: "/time-report", label: "勤務報告" },
+            { href: "/suggestions", label: "提案・改善" },
+          ].map((action) => (
+            <Link
+              key={action.href}
+              href={action.href}
+              className="rounded-xl border border-emerald-200 bg-white px-3 py-3 text-center text-sm font-semibold text-emerald-800 shadow-sm"
+            >
+              {action.label}
+            </Link>
+          ))}
         </section>
 
         <p className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-600 shadow-sm">

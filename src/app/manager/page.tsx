@@ -26,7 +26,9 @@ export default function ManagerPage() {
     { title: "シフトを編集" },
     { title: "希望を確認" },
     { title: "残業を見る" },
+    { title: "勤務報告" },
     { title: "勤務時間集計" },
+    { title: "提案・改善" },
     { title: "スタッフ管理" },
     { title: "レシピ管理" },
     { title: "設定" },
@@ -133,15 +135,19 @@ export default function ManagerPage() {
                     ? "/manager/requests"
                     : q.title === "残業を見る"
                       ? "/manager/overtime"
-                      : q.title === "勤務時間集計"
-                        ? "/manager/attendance"
-                        : q.title === "スタッフ管理"
-                          ? "/manager/employees"
-                          : q.title === "レシピ管理"
-                            ? "/manager/recipes"
-                            : q.title === "設定"
-                              ? "/manager/settings"
-                              : null;
+                      : q.title === "勤務報告"
+                        ? "/manager/time-reports"
+                        : q.title === "勤務時間集計"
+                          ? "/manager/attendance"
+                          : q.title === "提案・改善"
+                            ? "/manager/suggestions"
+                            : q.title === "スタッフ管理"
+                              ? "/manager/employees"
+                              : q.title === "レシピ管理"
+                                ? "/manager/recipes"
+                                : q.title === "設定"
+                                  ? "/manager/settings"
+                                  : null;
               const canOpen = href !== null;
               const card = (
                 <div
