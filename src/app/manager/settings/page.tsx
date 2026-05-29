@@ -81,7 +81,7 @@ export default function ManagerSettingsPage() {
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <h2 className="font-semibold text-slate-900">カフェ設定</h2>
-              <p className="mt-2 text-lg font-bold text-slate-900">Cafe Shift Demo</p>
+              <p className="mt-2 text-lg font-bold text-slate-900">Mame To Cha Tokyo Demo</p>
               <p className="mt-1 text-sm text-slate-600">タイムゾーン: Asia/Tokyo</p>
             </div>
             <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-emerald-800">デモ</span>
