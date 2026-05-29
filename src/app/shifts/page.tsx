@@ -579,7 +579,6 @@ export default function ShiftsPage() {
         <section className="grid grid-cols-2 gap-2">
           {[
             { href: "/requests", label: "シフト希望" },
-            { href: "/time-report", label: "勤務報告" },
             { href: "/suggestions", label: "提案・改善" },
           ].map((action) => (
             <Link
