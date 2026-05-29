@@ -23,13 +23,13 @@ export default function AppShell({
             <div className="flex items-center justify-between gap-3">
               <Link
                 href="/"
-                className="flex min-w-0 items-center gap-2 rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2"
+                className="flex min-w-0 items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2"
                 aria-label="Mame To Cha Tokyo home"
               >
                 <Image
                   src={logo}
                   alt="Mame To Cha Tokyo"
-                  className="h-9 w-9 rounded-2xl object-cover shadow-sm sm:h-10 sm:w-10"
+                  className="h-9 w-9 object-contain sm:h-10 sm:w-10"
                   priority
                 />
                 <span className="truncate text-base font-semibold leading-tight text-slate-900 sm:text-lg">Mame To Cha Tokyo</span>

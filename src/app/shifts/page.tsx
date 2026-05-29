@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import AppShell from "@/components/app-shell";
+import { useI18n } from "@/lib/i18n/use-i18n";
 import { DEMO_START_DATE, employees as coreEmployees, shiftTypes as coreShiftTypes } from "@/lib/mock-data/core";
 import type { ShiftCode } from "@/types/domain";
 
@@ -63,10 +64,10 @@ const shiftTypes = coreShiftTypes.map((shift) => ({
   time: shift.startTime && shift.endTime ? `${shift.startTime}–${shift.endTime}` : "",
 })) satisfies { code: ShiftCode; label: string; marker: string; time: string }[];
 
-const breakOptions: { label: string; value: BreakMinutes }[] = [
-  { label: "なし", value: 0 },
-  { label: "30分", value: 30 },
-  { label: "60分", value: 60 },
+const breakOptions: { labelKey: string; value: BreakMinutes }[] = [
+  { labelKey: "shifts.report.breakNone", value: 0 },
+  { labelKey: "shifts.report.break30", value: 30 },
+  { labelKey: "shifts.report.break60", value: 60 },
 ];
 
 const initialReports: WorkReport[] = [
@@ -134,16 +135,22 @@ function timeToMinutes(value: string) {
   return hour * 60 + minute;
 }
 
-function formatHours(minutes: number | null) {
+function formatHours(minutes: number | null, notEnteredLabel: string) {
   if (minutes === null || minutes < 0) {
-    return "未入力";
+    return notEnteredLabel;
   }
   const hours = minutes / 60;
   return `${Number.isInteger(hours) ? hours : hours.toFixed(1)}h`;
 }
 
-function formatBreak(minutes: BreakMinutes) {
-  return minutes === 0 ? "なし" : `${minutes}分`;
+function formatBreak(minutes: BreakMinutes, t: (key: string) => string) {
+  if (minutes === 0) {
+    return t("shifts.report.breakNone");
+  }
+  if (minutes === 30) {
+    return t("shifts.report.break30");
+  }
+  return t("shifts.report.break60");
 }
 
 function formatGroupSummary(dailyAssignments: Assignment[], shift: ShiftCode) {
@@ -159,6 +166,15 @@ function formatGroupSummary(dailyAssignments: Assignment[], shift: ShiftCode) {
 }
 
 export default function ShiftsPage() {
+  return (
+    <AppShell>
+      <ShiftsContent />
+    </AppShell>
+  );
+}
+
+function ShiftsContent() {
+  const { t } = useI18n();
   const [viewMode, setViewMode] = useState<ViewMode>("self");
   const [selectedDate, setSelectedDate] = useState(initialSelectedDate);
   const [startTime, setStartTime] = useState("08:30");
@@ -199,19 +215,19 @@ export default function ShiftsPage() {
     const cost = transportCost.trim() === "" ? 0 : Number(transportCost);
 
     if (!startTime || !endTime) {
-      setReportError("出勤時間と退勤時間を入力してください");
+      setReportError(!startTime ? t("shifts.report.validationStartRequired") : t("shifts.report.validationEndRequired"));
       return;
     }
     if (start === null || end === null || end <= start) {
-      setReportError("退勤時間は出勤時間より後にしてください");
+      setReportError(t("shifts.report.validationEndAfterStart"));
       return;
     }
     if (Number.isNaN(cost) || cost < 0) {
-      setReportError("交通費は0以上の数字で入力してください");
+      setReportError(t("shifts.report.validationTransportNonNegative"));
       return;
     }
     if (hasOvertime && !overtimeReason.trim()) {
-      setReportError("予定より長く働いた場合は理由を入力してください");
+      setReportError(t("shifts.report.validationReasonRequired"));
       return;
     }
 
@@ -229,20 +245,19 @@ export default function ShiftsPage() {
 
     setReports((current) => [nextReport, ...current]);
     setNextReportNumber((current) => current + 1);
-    setReportSuccess("勤務報告を保存しました（デモ）");
+    setReportSuccess(t("shifts.report.success"));
     setMemo("");
     setOvertimeReason("");
   }
 
   return (
-    <AppShell>
-      <div className="space-y-4 pb-4">
+    <div className="space-y-4 pb-4">
         <header className="rounded-2xl border border-emerald-100 bg-gradient-to-r from-emerald-50 to-amber-50 p-4 shadow-sm">
           <div className="flex flex-col gap-3">
             <div>
-              <p className="text-xs font-semibold tracking-[0.16em] text-emerald-700">勤務予定</p>
-              <h1 className="mt-1 text-2xl font-bold text-slate-900">シフトカレンダー</h1>
-              <p className="mt-1 text-sm text-slate-600">自分のシフトと全体の予定を確認できます</p>
+              <p className="text-xs font-semibold tracking-[0.16em] text-emerald-700">{t("shifts.twoWeekSchedule")}</p>
+              <h1 className="mt-1 text-2xl font-bold text-slate-900">{t("shifts.title")}</h1>
+              <p className="mt-1 text-sm text-slate-600">{t("shifts.subtitle")}</p>
             </div>
             <span className="inline-flex self-start items-center gap-2 rounded-full bg-white px-3 py-2 text-sm font-semibold text-slate-900 shadow-sm">
               <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-900 text-[11px] font-bold text-white">YH</span>
@@ -254,8 +269,8 @@ export default function ShiftsPage() {
         <section className="rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
           <div className="grid grid-cols-2 gap-2">
             {[
-              { id: "self" as const, label: "自分" },
-              { id: "all" as const, label: "全体" },
+              { id: "self" as const, label: t("shifts.selfView") },
+              { id: "all" as const, label: t("shifts.allView") },
             ].map((mode) => (
               <button
                 key={mode.id}
@@ -276,10 +291,10 @@ export default function ShiftsPage() {
         <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
           <div className="flex items-center justify-between gap-2">
             <div>
-              <h2 className="font-semibold text-slate-900">2週間シフト</h2>
-              <p className="text-xs text-slate-500">横にスライドして次の予定を確認</p>
+              <h2 className="font-semibold text-slate-900">{t("shifts.twoWeekSchedule")}</h2>
+              <p className="text-xs text-slate-500">{t("shifts.slideHint")}</p>
             </div>
-            <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-800">56日分</span>
+            <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-800">{t("shifts.daysCount")}</span>
           </div>
 
           <div className="mt-3 flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2">
@@ -307,7 +322,7 @@ export default function ShiftsPage() {
                     >
                       <div className="flex items-start justify-between gap-0.5">
                         <span className="text-[10px] text-slate-500">{day.weekday}</span>
-                        {isToday ? <span className="text-[9px] font-semibold text-emerald-700">今日</span> : null}
+                        {isToday ? <span className="text-[9px] font-semibold text-emerald-700">{t("shifts.today")}</span> : null}
                       </div>
                       <span className="block text-sm font-bold text-slate-900">{day.day}</span>
 
@@ -317,7 +332,7 @@ export default function ShiftsPage() {
                             selfShift?.code === "sick" ? "text-rose-700" : "text-emerald-800"
                           }`}
                         >
-                          {selfShift?.marker ?? "予定なし"}
+                          {selfShift?.marker ?? t("shifts.noShift")}
                         </span>
                       ) : (
                         <span className="mt-1 block text-[9px] leading-4 text-slate-600">
@@ -332,13 +347,13 @@ export default function ShiftsPage() {
               </div>
             ))}
           </div>
-          <p className="mt-1 text-center text-xs text-slate-500">← 横にスライド →</p>
+          <p className="mt-1 text-center text-xs text-slate-500">← {t("shifts.slideHint")} →</p>
         </section>
 
         {viewMode === "self" ? (
           <>
             <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <h2 className="font-semibold text-slate-900">自分のシフト</h2>
+              <h2 className="font-semibold text-slate-900">{t("shifts.myShift")}</h2>
               <p className="mt-1 text-sm text-slate-500">{formatDate(selectedDay)}</p>
               {selectedSelfShift ? (
                 <div className="mt-3 rounded-xl border border-amber-100 bg-amber-50 p-3">
@@ -353,28 +368,28 @@ export default function ShiftsPage() {
                   </div>
                   <p className="mt-3 text-sm text-slate-600">
                     {selectedSelfShift.code === "off"
-                      ? "本日はお休みです。"
+                      ? t("shifts.status.off")
                       : selectedSelfShift.code === "vacation"
-                        ? "休暇の予定です。"
+                        ? t("shifts.status.vacation")
                         : selectedSelfShift.code === "sick"
-                          ? "病欠として登録されています。"
-                          : "この時間帯で勤務予定です。"}
+                          ? t("shifts.status.sick")
+                          : t("shifts.status.working")}
                   </p>
                 </div>
               ) : (
-                <p className="mt-3 rounded-xl bg-slate-50 p-4 text-sm text-slate-500">予定はありません</p>
+                <p className="mt-3 rounded-xl bg-slate-50 p-4 text-sm text-slate-500">{t("shifts.noShift")}</p>
               )}
             </section>
 
             <section className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
               <div>
-                <h2 className="font-semibold text-slate-900">今日の勤務報告</h2>
-                <p className="mt-1 text-sm text-slate-500">出勤・退勤・休憩・交通費をここで記録できます</p>
+                <h2 className="font-semibold text-slate-900">{t("shifts.report.title")}</h2>
+                <p className="mt-1 text-sm text-slate-500">{t("shifts.report.subtitle")}</p>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <label className="block text-sm font-semibold text-slate-800">
-                  出勤時間
+                  {t("shifts.report.startTime")}
                   <input
                     type="time"
                     value={startTime}
@@ -383,7 +398,7 @@ export default function ShiftsPage() {
                   />
                 </label>
                 <label className="block text-sm font-semibold text-slate-800">
-                  退勤時間
+                  {t("shifts.report.endTime")}
                   <input
                     type="time"
                     value={endTime}
@@ -394,7 +409,7 @@ export default function ShiftsPage() {
               </div>
 
               <div>
-                <p className="text-sm font-semibold text-slate-800">休憩</p>
+                <p className="text-sm font-semibold text-slate-800">{t("shifts.report.break")}</p>
                 <div className="mt-2 grid grid-cols-3 gap-2">
                   {breakOptions.map((option) => (
                     <button
@@ -407,14 +422,14 @@ export default function ShiftsPage() {
                           : "border-slate-200 bg-slate-50 text-slate-700"
                       }`}
                     >
-                      {option.label}
+                      {t(option.labelKey)}
                     </button>
                   ))}
                 </div>
               </div>
 
               <label className="block text-sm font-semibold text-slate-800">
-                交通費
+                {t("shifts.report.transportCost")}
                 <div className="mt-1 flex items-center gap-2">
                   <input
                     type="number"
@@ -429,11 +444,11 @@ export default function ShiftsPage() {
               </label>
 
               <label className="block text-sm font-semibold text-slate-800">
-                メモ
+                {t("shifts.report.memo")}
                 <textarea
                   value={memo}
                   onChange={(event) => setMemo(event.target.value)}
-                  placeholder="例）電車遅延、急な延長対応など"
+                  placeholder={t("shifts.report.memoPlaceholder")}
                   rows={3}
                   className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
                 />
@@ -441,25 +456,25 @@ export default function ShiftsPage() {
 
               <div className="grid grid-cols-3 gap-2 rounded-xl bg-slate-50 p-3 text-center">
                 <div>
-                  <p className="text-xs text-slate-500">勤務時間</p>
-                  <p className="mt-1 font-semibold text-slate-900">{formatHours(workPreview.totalMinutes)}</p>
+                  <p className="text-xs text-slate-500">{t("shifts.report.workTime")}</p>
+                  <p className="mt-1 font-semibold text-slate-900">{formatHours(workPreview.totalMinutes, t("shifts.report.notEntered"))}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-500">休憩</p>
-                  <p className="mt-1 font-semibold text-slate-900">{formatBreak(breakMinutes)}</p>
+                  <p className="text-xs text-slate-500">{t("shifts.report.break")}</p>
+                  <p className="mt-1 font-semibold text-slate-900">{formatBreak(breakMinutes, t)}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-500">実働時間</p>
-                  <p className="mt-1 font-semibold text-emerald-800">{formatHours(workPreview.actualMinutes)}</p>
+                  <p className="text-xs text-slate-500">{t("shifts.report.actualWorkTime")}</p>
+                  <p className="mt-1 font-semibold text-emerald-800">{formatHours(workPreview.actualMinutes, t("shifts.report.notEntered"))}</p>
                 </div>
               </div>
 
               <div className="rounded-xl border border-amber-100 bg-amber-50 p-3">
-                <p className="text-sm font-semibold text-slate-800">予定より長く働きましたか？</p>
+                <p className="text-sm font-semibold text-slate-800">{t("shifts.report.longerThanPlanned")}</p>
                 <div className="mt-2 grid grid-cols-2 gap-2">
                   {[
-                    { label: "はい", value: true },
-                    { label: "いいえ", value: false },
+                    { label: t("shifts.report.yes"), value: true },
+                    { label: t("shifts.report.no"), value: false },
                   ].map((option) => (
                     <button
                       key={option.label}
@@ -477,11 +492,11 @@ export default function ShiftsPage() {
                 </div>
                 {hasOvertime ? (
                   <label className="mt-3 block text-sm font-semibold text-slate-800">
-                    理由
+                    {t("shifts.report.reason")}
                     <textarea
                       value={overtimeReason}
                       onChange={(event) => setOvertimeReason(event.target.value)}
-                      placeholder="例）急な来客対応、片付け延長など"
+                      placeholder={t("shifts.report.reasonPlaceholder")}
                       rows={2}
                       className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
                     />
@@ -499,12 +514,12 @@ export default function ShiftsPage() {
                 onClick={saveWorkReport}
                 className="w-full rounded-xl bg-emerald-800 px-4 py-3 text-sm font-semibold text-white shadow-sm"
               >
-                勤務報告を保存する
+                {t("shifts.report.save")}
               </button>
             </section>
 
             <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <h2 className="font-semibold text-slate-900">最近の勤務報告</h2>
+              <h2 className="font-semibold text-slate-900">{t("shifts.report.recentTitle")}</h2>
               <div className="mt-3 space-y-2">
                 {reports.map((report) => {
                   const start = timeToMinutes(report.startTime);
@@ -516,21 +531,32 @@ export default function ShiftsPage() {
                         <div>
                           <p className="text-sm font-semibold text-slate-900">{formatReportDate(report.date)}</p>
                           <p className="text-xs text-slate-600">
-                            {report.startTime}–{report.endTime} / 休憩 {formatBreak(report.breakMinutes)}
+                            {report.startTime}–{report.endTime} / {t("shifts.report.break")} {formatBreak(report.breakMinutes, t)}
                           </p>
                         </div>
                         <span className="rounded-full bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-800">
-                          実働 {formatHours(actualMinutes)}
+                          {t("shifts.report.actualWorkTime")} {formatHours(actualMinutes, t("shifts.report.notEntered"))}
                         </span>
                       </div>
                       <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-600">
-                        <span>交通費 {report.transportCost.toLocaleString()}円</span>
-                        <span>{report.hasOvertime ? "予定より長く勤務: はい" : "予定より長く勤務: いいえ"}</span>
+                        <span>
+                          {t("shifts.report.transportCost")} {report.transportCost.toLocaleString()}円
+                        </span>
+                        <span>
+                          {t("shifts.report.longerThanPlannedShort")}:{" "}
+                          {report.hasOvertime ? t("shifts.report.yes") : t("shifts.report.no")}
+                        </span>
                       </div>
                       {report.overtimeReason ? (
-                        <p className="mt-1 text-xs text-slate-500">理由: {report.overtimeReason}</p>
+                        <p className="mt-1 text-xs text-slate-500">
+                          {t("shifts.report.reason")}: {report.overtimeReason}
+                        </p>
                       ) : null}
-                      {report.memo ? <p className="mt-1 text-xs text-slate-500">メモ: {report.memo}</p> : null}
+                      {report.memo ? (
+                        <p className="mt-1 text-xs text-slate-500">
+                          {t("shifts.report.memo")}: {report.memo}
+                        </p>
+                      ) : null}
                     </article>
                   );
                 })}
@@ -539,7 +565,7 @@ export default function ShiftsPage() {
           </>
         ) : (
           <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <h2 className="font-semibold text-slate-900">選択した日のシフト</h2>
+            <h2 className="font-semibold text-slate-900">{t("shifts.everyoneShift")}</h2>
             <p className="mt-1 text-sm text-slate-500">{formatDate(selectedDay)}</p>
             <div className="mt-3 space-y-2">
               {shiftTypes.map((shift) => {
@@ -550,10 +576,13 @@ export default function ShiftsPage() {
                       <p className="text-sm font-semibold text-slate-800">
                         {shift.label} {shift.time}
                       </p>
-                      <span className="text-xs text-slate-500">{members.length}名</span>
+                      <span className="text-xs text-slate-500">
+                        {members.length}
+                        {t("shifts.peopleCountSuffix")}
+                      </span>
                     </div>
                     {members.length === 0 ? (
-                      <p className="mt-2 text-xs text-slate-400">該当なし</p>
+                      <p className="mt-2 text-xs text-slate-400">{t("shifts.noMembers")}</p>
                     ) : (
                       <div className="mt-2 flex flex-wrap gap-2">
                         {members.map((assignment) => {
@@ -578,8 +607,9 @@ export default function ShiftsPage() {
 
         <section className="grid grid-cols-2 gap-2">
           {[
-            { href: "/requests", label: "シフト希望" },
-            { href: "/suggestions", label: "提案・改善" },
+            { href: "/requests", label: t("shifts.shiftRequest") },
+            { href: "/suggestions", label: t("shifts.suggestions") },
+            { href: "/recipes", label: t("shifts.recipes") },
           ].map((action) => (
             <Link
               key={action.href}
@@ -592,9 +622,8 @@ export default function ShiftsPage() {
         </section>
 
         <p className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-600 shadow-sm">
-          この画面はデモです。実際の保存は後でSupabaseに接続します。
+          {t("shifts.demoNote")}
         </p>
       </div>
-    </AppShell>
   );
 }
