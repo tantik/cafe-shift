@@ -105,6 +105,10 @@ function formatBreak(minutes: number, noneLabel: string) {
   return minutes === 0 ? noneLabel : `${minutes}分`;
 }
 
+function formatYen(value: number) {
+  return `${value.toLocaleString("ja-JP")}円`;
+}
+
 function statusLabel(status: ReportStatus, t: (key: string) => string) {
   return status === "reviewed"
     ? t("managerTimeReports.status.reviewed")
@@ -184,7 +188,7 @@ function ManagerTimeReportsContent() {
             {[
               { label: t("managerTimeReports.summary.totalActualHours"), value: summary.totalHours },
               { label: t("managerTimeReports.summary.totalBreakHours"), value: summary.breakHours },
-              { label: t("managerTimeReports.summary.totalTransportCost"), value: `${summary.transport.toLocaleString()}円` },
+              { label: t("managerTimeReports.summary.totalTransportCost"), value: formatYen(summary.transport) },
               { label: t("managerTimeReports.summary.unreviewed"), value: `${summary.unreviewed}件` },
             ].map((item) => (
               <div key={item.label} className="rounded-xl border border-amber-100 bg-white px-3 py-2.5 shadow-sm">
@@ -252,7 +256,7 @@ function ManagerTimeReportsContent() {
                   {t("managerTimeReports.fields.break")} {formatBreak(report.breakMinutes, t("managerTimeReports.status.none"))}
                 </p>
                 <p>
-                  {t("managerTimeReports.fields.transportCost")} {report.transportCost.toLocaleString()}円
+                  {t("managerTimeReports.fields.transportCost")} {formatYen(report.transportCost)}
                 </p>
                 <p className="truncate">
                   {t("managerTimeReports.fields.memo")} {report.memo || t("managerTimeReports.status.none")}
