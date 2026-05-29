@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import AppShell from '@/components/app-shell';
+import { useI18n } from '@/lib/i18n/use-i18n';
 
 type Recipe = {
   id: string;
@@ -156,10 +157,12 @@ function RecipeCard({
   recipe,
   isSelected,
   onClick,
+  photoLabel,
 }: {
   recipe: Recipe;
   isSelected: boolean;
   onClick: () => void;
+  photoLabel: string;
 }) {
   return (
     <button
@@ -172,7 +175,7 @@ function RecipeCard({
     >
       <div className={`rounded-2xl p-3 ${recipe.color}`}>
         <div className="aspect-square rounded-lg bg-gradient-to-br from-white/50 to-slate-100 flex items-center justify-center text-xs text-slate-400">
-          写真
+          {photoLabel}
         </div>
       </div>
       <div className="mt-2 px-2 pb-2">
@@ -186,19 +189,28 @@ function RecipeCard({
 }
 
 export default function RecipesPage() {
+  return (
+    <AppShell>
+      <RecipesContent />
+    </AppShell>
+  );
+}
+
+function RecipesContent() {
+  const { t } = useI18n();
   const [selectedRecipeId, setSelectedRecipeId] = useState('matcha_latte');
   const selectedRecipe = mockRecipes.find((r) => r.id === selectedRecipeId);
 
   // gallery will render all recipes in a 2-row horizontally scrolling grid
 
   return (
-    <AppShell>
+    <>
       <div className="space-y-6 pb-4">
         {/* Header */}
         <section className="rounded-3xl bg-gradient-to-br from-green-50 to-teal-50 p-6 shadow-sm shadow-slate-200">
-          <h2 className="text-2xl font-semibold text-slate-900">レシピ</h2>
+          <h2 className="text-2xl font-semibold text-slate-900">{t("recipes.title")}</h2>
           <p className="mt-2 text-sm text-slate-600">
-            ドリンクの作り方をすぐ確認できます
+            {t("recipes.subtitle")}
           </p>
         </section>
 
@@ -212,6 +224,7 @@ export default function RecipesPage() {
                     recipe={recipe}
                     isSelected={selectedRecipeId === recipe.id}
                     onClick={() => setSelectedRecipeId(recipe.id)}
+                    photoLabel={t("recipes.photo")}
                   />
                 </div>
               ))}
@@ -239,7 +252,7 @@ export default function RecipesPage() {
 
             {/* Ingredients */}
             <div className="mt-5 border-t border-slate-100 pt-5">
-              <h4 className="font-semibold text-slate-900">材料</h4>
+              <h4 className="font-semibold text-slate-900">{t("recipes.ingredients")}</h4>
               <ul className="mt-3 space-y-2">
                 {selectedRecipe.ingredients.map((ingredient, idx) => (
                   <li key={idx} className="flex items-start gap-3 text-sm text-slate-600">
@@ -252,7 +265,7 @@ export default function RecipesPage() {
 
             {/* Steps */}
             <div className="mt-5 border-t border-slate-100 pt-5">
-              <h4 className="font-semibold text-slate-900">作り方</h4>
+              <h4 className="font-semibold text-slate-900">{t("recipes.steps")}</h4>
               <ol className="mt-3 space-y-2">
                 {selectedRecipe.steps.map((step, idx) => (
                   <li key={idx} className="flex gap-3 text-sm text-slate-600">
@@ -269,7 +282,7 @@ export default function RecipesPage() {
             {selectedRecipe.notes && selectedRecipe.notes.length > 0 && (
               <div className="mt-5 border-t border-slate-100 pt-5">
                 <h4 className="font-semibold text-slate-900">
-                  {selectedRecipe.name === '抹茶ラテ' ? '抹茶液の作り方' : '追加メモ'}
+                  {selectedRecipe.name === '抹茶ラテ' ? t("recipes.matchaLiquid") : t("recipes.tips")}
                 </h4>
                 <div className="mt-3 rounded-2xl bg-slate-50 p-4">
                   <div className="space-y-2">
@@ -295,6 +308,6 @@ export default function RecipesPage() {
           scrollbar-width: none;
         }
       `}</style>
-    </AppShell>
+    </>
   );
 }
