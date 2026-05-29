@@ -20,6 +20,20 @@ export type ShiftRequest = {
   createdAt: string;
 };
 
+export type OvertimeStatus = "reported" | "reviewed";
+
+export type OvertimeEntry = {
+  id: string;
+  employeeId: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  hours: number;
+  reason: string;
+  status: OvertimeStatus;
+  createdAt: string;
+};
+
 export type Employee = {
   id: string;
   name: string;
