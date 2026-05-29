@@ -117,6 +117,7 @@ export default function ManagerTimeReportsPage() {
     () => ({
       count: reports.length,
       totalHours: formatHours(reports.reduce((sum, report) => sum + actualMinutes(report), 0)),
+      breakHours: formatHours(reports.reduce((sum, report) => sum + report.breakMinutes, 0)),
       transport: reports.reduce((sum, report) => sum + report.transportCost, 0),
       unreviewed: reports.filter((report) => report.status === "unreviewed").length,
       extendedWork: reports.filter((report) => report.hasExtendedWork).length,
@@ -149,8 +150,6 @@ export default function ManagerTimeReportsPage() {
         <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {[
             { label: "報告件数", value: `${summary.count}件` },
-            { label: "実働時間合計", value: summary.totalHours },
-            { label: "交通費合計", value: `${summary.transport.toLocaleString()}円` },
             { label: "未確認", value: `${summary.unreviewed}件` },
             { label: "延長勤務", value: `${summary.extendedWork}件` },
           ].map((item) => (
@@ -159,6 +158,30 @@ export default function ManagerTimeReportsPage() {
               <p className="mt-1 text-xl font-bold text-slate-900">{item.value}</p>
             </div>
           ))}
+        </section>
+
+        <section className="rounded-2xl border border-amber-100 bg-amber-50 p-4 shadow-sm">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h2 className="font-semibold text-slate-900">勤務時間サマリー</h2>
+              <p className="mt-1 text-sm text-slate-600">
+                勤務時間は報告内容の確認用です。給与計算・法定残業計算はMVPでは行いません。
+              </p>
+            </div>
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {[
+              { label: "実働時間合計", value: summary.totalHours },
+              { label: "休憩時間合計", value: summary.breakHours },
+              { label: "交通費合計", value: `${summary.transport.toLocaleString()}円` },
+              { label: "未確認レポート", value: `${summary.unreviewed}件` },
+            ].map((item) => (
+              <div key={item.label} className="rounded-xl border border-amber-100 bg-white px-3 py-2.5 shadow-sm">
+                <p className="text-xs text-slate-500">{item.label}</p>
+                <p className="mt-1 text-lg font-bold text-slate-900">{item.value}</p>
+              </div>
+            ))}
+          </div>
         </section>
 
         <section className="rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">

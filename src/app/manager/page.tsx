@@ -26,7 +26,6 @@ export default function ManagerPage() {
     { title: "シフトを編集" },
     { title: "希望を確認" },
     { title: "勤務報告" },
-    { title: "勤務時間集計" },
     { title: "提案・改善" },
     { title: "スタッフ管理" },
     { title: "レシピ管理" },
@@ -132,19 +131,17 @@ export default function ManagerPage() {
                   ? "/manager/shifts"
                   : q.title === "希望を確認"
                     ? "/manager/requests"
-                    : q.title === "勤務報告"
-                      ? "/manager/time-reports"
-                      : q.title === "勤務時間集計"
-                        ? "/manager/attendance"
-                        : q.title === "提案・改善"
-                          ? "/manager/suggestions"
-                          : q.title === "スタッフ管理"
-                            ? "/manager/employees"
-                            : q.title === "レシピ管理"
-                              ? "/manager/recipes"
-                              : q.title === "設定"
-                                ? "/manager/settings"
-                                : null;
+                  : q.title === "勤務報告"
+                    ? "/manager/time-reports"
+                    : q.title === "提案・改善"
+                      ? "/manager/suggestions"
+                      : q.title === "スタッフ管理"
+                        ? "/manager/employees"
+                        : q.title === "レシピ管理"
+                          ? "/manager/recipes"
+                          : q.title === "設定"
+                            ? "/manager/settings"
+                            : null;
               const canOpen = href !== null;
               const card = (
                 <div
@@ -157,7 +154,7 @@ export default function ManagerPage() {
                   <div>
                     <div className="font-medium text-slate-800">{q.title}</div>
                     <div className={`text-xs ${canOpen ? "font-semibold text-emerald-700" : "text-slate-500"}`}>
-                      {q.title === "勤務報告" ? "延長勤務も確認 →" : canOpen ? "開く →" : "準備中"}
+                      {q.title === "勤務報告" ? "勤務時間集計も確認 →" : canOpen ? "開く →" : "準備中"}
                     </div>
                   </div>
                   <div className="text-xs text-slate-400">›</div>
