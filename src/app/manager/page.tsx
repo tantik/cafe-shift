@@ -25,6 +25,12 @@ type OverviewRow = {
   shifts: OverviewShift[];
 };
 
+type ActualMonthlyTotal = {
+  workedDays: number;
+  workedHours: number;
+  note: "ok" | "lower" | "overtime" | "missing";
+};
+
 const noShift: OverviewShift = { time: "", hours: 0, kind: "none" };
 const offShift: OverviewShift = { time: "", hours: 0, kind: "off" };
 const morningShift: OverviewShift = { time: "8:30-13:00", hours: 4.5, kind: "short" };
@@ -56,40 +62,79 @@ function repeatPattern(pattern: OverviewShift[]) {
   return Array.from({ length: 28 }, (_, index) => pattern[index % pattern.length]);
 }
 
+function applyShiftOverrides(shifts: OverviewShift[], overrides: Record<number, OverviewShift>) {
+  return shifts.map((shift, index) => overrides[index] ?? shift);
+}
+
 const shiftOverviewRows: OverviewRow[] = [
   {
     name: "山田 花子",
-    shifts: repeatPattern([morningShift, noShift, fullShift, noShift, afternoonShift, offShift, offShift]),
+    shifts: applyShiftOverrides(
+      repeatPattern([morningShift, noShift, fullShift, noShift, afternoonShift, offShift, offShift]),
+      { 8: morningShift, 11: offShift, 16: afternoonLongShift },
+    ),
   },
   {
     name: "佐藤 健",
-    shifts: repeatPattern([noShift, afternoonLongShift, noShift, morningShift, offShift, fullShift, noShift]),
+    shifts: applyShiftOverrides(
+      repeatPattern([noShift, afternoonLongShift, noShift, morningShift, offShift, fullShift, noShift]),
+      { 10: fullShift, 12: noShift, 21: morningShift },
+    ),
   },
   {
     name: "鈴木 愛",
-    shifts: repeatPattern([afternoonLongShift, fullShift, noShift, noShift, morningShift, offShift, offShift]),
+    shifts: applyShiftOverrides(
+      repeatPattern([afternoonLongShift, fullShift, noShift, noShift, morningShift, offShift, offShift]),
+      { 15: noShift, 18: fullShift, 24: afternoonShift },
+    ),
   },
   {
     name: "伊藤 翔",
-    shifts: repeatPattern([fullShift, offShift, afternoonLongShift, noShift, noShift, morningShift, offShift]),
+    shifts: applyShiftOverrides(
+      repeatPattern([fullShift, offShift, afternoonLongShift, noShift, noShift, morningShift, offShift]),
+      { 14: noShift, 17: morningShift, 24: fullShift },
+    ),
   },
   {
     name: "高橋 美咲",
-    shifts: repeatPattern([offShift, noShift, morningShift, afternoonLongShift, noShift, offShift, fullShift]),
+    shifts: applyShiftOverrides(
+      repeatPattern([offShift, noShift, morningShift, afternoonLongShift, noShift, offShift, fullShift]),
+      { 9: afternoonShift, 13: noShift, 20: morningShift },
+    ),
   },
   {
     name: "田中 優",
-    shifts: repeatPattern([morningShift, afternoonLongShift, offShift, fullShift, noShift, noShift, offShift]),
+    shifts: applyShiftOverrides(
+      repeatPattern([morningShift, afternoonLongShift, offShift, fullShift, noShift, noShift, offShift]),
+      { 16: morningShift, 19: afternoonLongShift, 25: fullShift },
+    ),
   },
   {
     name: "中村 蓮",
-    shifts: repeatPattern([noShift, fullShift, morningShift, offShift, afternoonLongShift, noShift, offShift]),
+    shifts: applyShiftOverrides(
+      repeatPattern([noShift, fullShift, morningShift, offShift, afternoonLongShift, noShift, offShift]),
+      { 14: afternoonShift, 19: fullShift, 26: morningShift },
+    ),
   },
   {
     name: "小林 杏",
-    shifts: repeatPattern([afternoonLongShift, noShift, offShift, morningShift, fullShift, offShift, noShift]),
+    shifts: applyShiftOverrides(
+      repeatPattern([afternoonLongShift, noShift, offShift, morningShift, fullShift, offShift, noShift]),
+      { 15: morningShift, 21: fullShift, 25: noShift },
+    ),
   },
 ];
+
+const demoActualMonthlyTotals: Record<string, ActualMonthlyTotal> = {
+  "山田 花子": { workedDays: 11, workedHours: 63.5, note: "lower" },
+  "佐藤 健": { workedDays: 12, workedHours: 67, note: "ok" },
+  "鈴木 愛": { workedDays: 13, workedHours: 75, note: "overtime" },
+  "伊藤 翔": { workedDays: 12, workedHours: 66, note: "ok" },
+  "高橋 美咲": { workedDays: 10, workedHours: 57, note: "lower" },
+  "田中 優": { workedDays: 12, workedHours: 66, note: "ok" },
+  "中村 蓮": { workedDays: 13, workedHours: 74.5, note: "overtime" },
+  "小林 杏": { workedDays: 0, workedHours: 0, note: "missing" },
+};
 
 function shiftCellClass(kind: OverviewShiftKind) {
   if (kind === "full") {
@@ -122,6 +167,32 @@ function formatOverviewTotal(total: { days: number; hours: number }, t: (key: st
   return `${total.days}${t("manager.shiftOverview.days")} / ${formatOverviewHours(total.hours)}${t("manager.shiftOverview.hours")}`;
 }
 
+function actualTotalClass(note: ActualMonthlyTotal["note"]) {
+  if (note === "ok") {
+    return "border-emerald-100 bg-emerald-50 text-emerald-800";
+  }
+  if (note === "lower") {
+    return "border-amber-100 bg-amber-50 text-amber-800";
+  }
+  if (note === "overtime") {
+    return "border-sky-100 bg-sky-50 text-sky-800";
+  }
+  return "border-slate-200 bg-slate-50 text-slate-500";
+}
+
+function actualNoteLabel(note: ActualMonthlyTotal["note"], t: (key: string) => string) {
+  if (note === "ok") {
+    return t("manager.shiftOverview.actualOk");
+  }
+  if (note === "lower") {
+    return t("manager.shiftOverview.actualLower");
+  }
+  if (note === "overtime") {
+    return t("manager.shiftOverview.actualOvertime");
+  }
+  return t("manager.shiftOverview.actualMissing");
+}
+
 export default function ManagerPage() {
   return (
     <AppShell variant="wide">
@@ -147,10 +218,6 @@ function ManagerContent() {
     { title: t("manager.statusSuggestions"), subtitle: t("suggestions.statusUnchecked"), count: 1 },
   ];
   const selectedWeek = shiftOverviewWeeks[selectedWeekIndex];
-  const monthlyTotals = shiftOverviewRows.map((row) => ({
-    name: row.name,
-    ...overviewTotal(row.shifts),
-  }));
   const monthTotal = overviewTotal(shiftOverviewRows.flatMap((row) => row.shifts));
   const pendingRequests = 8;
 
@@ -317,26 +384,13 @@ function ManagerContent() {
               </div>
             </div>
 
-            <section className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
-              <h3 className="text-sm font-semibold text-slate-900">{t("manager.shiftOverview.staffMonthlySummary")}</h3>
-              <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-                {monthlyTotals.map((item) => (
-                  <div key={item.name} className="rounded-xl border border-slate-100 bg-white px-3 py-2 shadow-sm">
-                    <p className="truncate text-sm font-semibold text-slate-900">{item.name}</p>
-                    <p className="mt-1 text-xs font-semibold text-emerald-700">
-                      {formatOverviewTotal(item, t)}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </section>
-
             <section className="rounded-2xl border border-slate-200 bg-slate-50">
               <div className="border-b border-slate-200 p-3">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <h3 className="text-sm font-semibold text-slate-900">{t("manager.shiftOverview.weeklyView")}</h3>
                     <p className="mt-0.5 text-xs text-slate-500">{selectedWeek.range}</p>
+                    <p className="mt-0.5 text-xs font-medium text-emerald-700">{t("manager.shiftOverview.selectedWeekTotalHint")}</p>
                   </div>
                   <div className="flex gap-2 overflow-x-auto pb-0.5">
                     {shiftOverviewWeeks.map((week, index) => (
@@ -359,7 +413,7 @@ function ManagerContent() {
               </div>
 
               <div className="overflow-x-auto">
-                <table className="min-w-[760px] border-separate border-spacing-0 text-left text-sm">
+                <table className="min-w-[980px] border-separate border-spacing-0 text-left text-sm">
                   <thead>
                     <tr>
                       <th className="sticky left-0 z-20 w-36 border-b border-r border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-500">
@@ -380,8 +434,14 @@ function ManagerContent() {
                           <span className="mt-0.5 block text-[11px] text-slate-500">{day.weekday}</span>
                         </th>
                       ))}
-                      <th className="sticky right-0 z-20 w-28 border-b border-slate-200 bg-slate-50 px-3 py-2 text-right text-xs font-semibold text-slate-500">
-                        {t("manager.shiftOverview.weekTotal")}
+                      <th className="w-28 border-b border-r border-slate-200 bg-slate-50 px-3 py-2 text-right text-xs font-semibold text-slate-500">
+                        {t("manager.shiftOverview.selectedWeekTotal")}
+                      </th>
+                      <th className="w-32 border-b border-r border-slate-200 bg-emerald-50 px-3 py-2 text-right text-xs font-semibold text-emerald-800">
+                        {t("manager.shiftOverview.monthlyPlanned")}
+                      </th>
+                      <th className="w-36 border-b border-slate-200 bg-amber-50 px-3 py-2 text-right text-xs font-semibold text-amber-800">
+                        {t("manager.shiftOverview.monthlyActual")}
                       </th>
                     </tr>
                   </thead>
@@ -389,6 +449,8 @@ function ManagerContent() {
                     {shiftOverviewRows.map((row) => {
                       const weekShifts = row.shifts.slice(selectedWeek.startIndex, selectedWeek.startIndex + 7);
                       const weeklyTotal = overviewTotal(weekShifts);
+                      const plannedTotal = overviewTotal(row.shifts);
+                      const actualTotal = demoActualMonthlyTotals[row.name];
                       return (
                         <tr key={`${selectedWeek.key}-${row.name}`} className="group">
                           <th className="sticky left-0 z-10 border-r border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 group-hover:bg-amber-50">
@@ -408,8 +470,25 @@ function ManagerContent() {
                               </span>
                             </td>
                           ))}
-                          <td className="sticky right-0 z-10 border-t border-slate-100 bg-white px-3 py-2 text-right text-xs font-semibold text-slate-800 group-hover:bg-amber-50">
+                          <td className="border-r border-t border-slate-100 bg-white px-3 py-2 text-right text-xs font-semibold text-slate-800 group-hover:bg-amber-50">
                             {formatOverviewTotal(weeklyTotal, t)}
+                          </td>
+                          <td className="border-r border-t border-slate-100 bg-white px-3 py-2 text-right text-xs font-semibold text-emerald-800 group-hover:bg-amber-50">
+                            <span className="block text-[11px] text-slate-500">{t("manager.shiftOverview.plannedShort")}</span>
+                            <span>{formatOverviewTotal(plannedTotal, t)}</span>
+                          </td>
+                          <td className="border-t border-slate-100 bg-white px-3 py-2 text-right text-xs font-semibold group-hover:bg-amber-50">
+                            {actualTotal && actualTotal.note !== "missing" ? (
+                              <span className={`inline-flex flex-col items-end rounded-lg border px-2 py-1 ${actualTotalClass(actualTotal.note)}`}>
+                                <span className="text-[11px] font-medium">{actualNoteLabel(actualTotal.note, t)}</span>
+                                <span>{formatOverviewTotal({ days: actualTotal.workedDays, hours: actualTotal.workedHours }, t)}</span>
+                              </span>
+                            ) : (
+                              <span className={`inline-flex flex-col items-end rounded-lg border px-2 py-1 ${actualTotalClass("missing")}`}>
+                                <span className="text-[11px] font-medium">{t("manager.shiftOverview.notReported")}</span>
+                                <span>{t("manager.shiftOverview.actualMissing")}</span>
+                              </span>
+                            )}
                           </td>
                         </tr>
                       );
