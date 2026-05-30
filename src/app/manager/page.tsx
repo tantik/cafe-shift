@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import AppShell from "@/components/app-shell";
 import { useI18n } from "@/lib/i18n/use-i18n";
 import Link from "next/link";
@@ -11,6 +12,116 @@ type QuickAction = {
   descriptionKey: string;
 };
 
+type OverviewShiftKind = "full" | "short" | "off" | "none";
+
+type OverviewShift = {
+  time: string;
+  hours: number;
+  kind: OverviewShiftKind;
+};
+
+type OverviewRow = {
+  name: string;
+  shifts: OverviewShift[];
+};
+
+const noShift: OverviewShift = { time: "", hours: 0, kind: "none" };
+const offShift: OverviewShift = { time: "", hours: 0, kind: "off" };
+const morningShift: OverviewShift = { time: "8:30-13:00", hours: 4.5, kind: "short" };
+const afternoonShift: OverviewShift = { time: "13:00-17:00", hours: 4, kind: "short" };
+const afternoonLongShift: OverviewShift = { time: "13:00-17:30", hours: 4.5, kind: "short" };
+const fullShift: OverviewShift = { time: "8:30-17:00", hours: 7.5, kind: "full" };
+
+const shiftOverviewWeekdays = ["月", "火", "水", "木", "金", "土", "日"];
+const shiftOverviewDays = Array.from({ length: 28 }, (_, index) => ({
+  key: `2026-06-${String(index + 1).padStart(2, "0")}`,
+  date: `6/${index + 1}`,
+  weekday: shiftOverviewWeekdays[index % 7],
+  isWeekend: index % 7 >= 5,
+  isToday: index === 0,
+}));
+
+const shiftOverviewWeeks = Array.from({ length: 4 }, (_, index) => {
+  const weekDays = shiftOverviewDays.slice(index * 7, index * 7 + 7);
+  return {
+    key: `week-${index + 1}`,
+    labelKey: `manager.shiftOverview.week${index + 1}`,
+    range: `${weekDays[0].date}(${weekDays[0].weekday})〜${weekDays[6].date}(${weekDays[6].weekday})`,
+    days: weekDays,
+    startIndex: index * 7,
+  };
+});
+
+function repeatPattern(pattern: OverviewShift[]) {
+  return Array.from({ length: 28 }, (_, index) => pattern[index % pattern.length]);
+}
+
+const shiftOverviewRows: OverviewRow[] = [
+  {
+    name: "山田 花子",
+    shifts: repeatPattern([morningShift, noShift, fullShift, noShift, afternoonShift, offShift, offShift]),
+  },
+  {
+    name: "佐藤 健",
+    shifts: repeatPattern([noShift, afternoonLongShift, noShift, morningShift, offShift, fullShift, noShift]),
+  },
+  {
+    name: "鈴木 愛",
+    shifts: repeatPattern([afternoonLongShift, fullShift, noShift, noShift, morningShift, offShift, offShift]),
+  },
+  {
+    name: "伊藤 翔",
+    shifts: repeatPattern([fullShift, offShift, afternoonLongShift, noShift, noShift, morningShift, offShift]),
+  },
+  {
+    name: "高橋 美咲",
+    shifts: repeatPattern([offShift, noShift, morningShift, afternoonLongShift, noShift, offShift, fullShift]),
+  },
+  {
+    name: "田中 優",
+    shifts: repeatPattern([morningShift, afternoonLongShift, offShift, fullShift, noShift, noShift, offShift]),
+  },
+  {
+    name: "中村 蓮",
+    shifts: repeatPattern([noShift, fullShift, morningShift, offShift, afternoonLongShift, noShift, offShift]),
+  },
+  {
+    name: "小林 杏",
+    shifts: repeatPattern([afternoonLongShift, noShift, offShift, morningShift, fullShift, offShift, noShift]),
+  },
+];
+
+function shiftCellClass(kind: OverviewShiftKind) {
+  if (kind === "full") {
+    return "border-emerald-100 bg-emerald-50 text-emerald-900";
+  }
+  if (kind === "short") {
+    return "border-amber-100 bg-amber-50 text-amber-900";
+  }
+  if (kind === "off") {
+    return "border-slate-200 bg-slate-100 text-slate-500";
+  }
+  return "border-transparent bg-transparent text-slate-300";
+}
+
+function formatOverviewHours(value: number) {
+  return Number.isInteger(value) ? String(value) : value.toFixed(1);
+}
+
+function overviewTotal(shifts: OverviewShift[]) {
+  return shifts.reduce(
+    (total, shift) => ({
+      days: shift.hours > 0 ? total.days + 1 : total.days,
+      hours: total.hours + shift.hours,
+    }),
+    { days: 0, hours: 0 },
+  );
+}
+
+function formatOverviewTotal(total: { days: number; hours: number }, t: (key: string) => string) {
+  return `${total.days}${t("manager.shiftOverview.days")} / ${formatOverviewHours(total.hours)}${t("manager.shiftOverview.hours")}`;
+}
+
 export default function ManagerPage() {
   return (
     <AppShell variant="wide">
@@ -21,6 +132,7 @@ export default function ManagerPage() {
 
 function ManagerContent() {
   const { t } = useI18n();
+  const [selectedWeekIndex, setSelectedWeekIndex] = useState(0);
   // Mock data (deterministic, no external calls)
   const todayLabel = "6月1日（月）";
   const shiftGroups = [
@@ -34,12 +146,13 @@ function ManagerContent() {
     { title: t("manager.statusUncheckedReports"), subtitle: t("manager.extendedWork"), count: 3 },
     { title: t("manager.statusSuggestions"), subtitle: t("suggestions.statusUnchecked"), count: 1 },
   ];
-  const timeSummaryPeriod = "5月1日〜5月31日";
-  const timeRows = [
-    { name: "山田 花子", planned: "72h", overtime: "2h", total: "74h" },
-    { name: "佐藤 健", planned: "68h", sick: "-4.5h", total: "63.5h" },
-    { name: "鈴木 愛", planned: "80h", overtime: "1.5h", total: "81.5h" },
-  ];
+  const selectedWeek = shiftOverviewWeeks[selectedWeekIndex];
+  const monthlyTotals = shiftOverviewRows.map((row) => ({
+    name: row.name,
+    ...overviewTotal(row.shifts),
+  }));
+  const monthTotal = overviewTotal(shiftOverviewRows.flatMap((row) => row.shifts));
+  const pendingRequests = 8;
 
   const quickActions: QuickAction[] = [
     {
@@ -167,36 +280,147 @@ function ManagerContent() {
           </section>
         </div>
 
-        {/* Time summary preview (full width) */}
-        <section className="rounded-2xl bg-white p-4 shadow-sm border border-slate-100">
-          <div className="flex items-center justify-between">
+        {/* Monthly shift overview */}
+        <section className="rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <div className="text-sm text-slate-500">{t("manager.timeSummaryTitle")}</div>
-              <div className="mt-1 font-semibold text-slate-900">{timeSummaryPeriod}</div>
+              <h2 className="text-lg font-semibold text-slate-900">{t("manager.shiftOverview.title")}</h2>
+              <p className="mt-1 max-w-2xl text-sm text-slate-600">{t("manager.shiftOverview.subtitle")}</p>
             </div>
-            <div className="text-xs text-slate-500">{t("manager.timeSummaryNote")}</div>
+            <Link
+              href="/manager/shifts"
+              className="inline-flex shrink-0 items-center justify-center rounded-xl bg-emerald-800 px-3 py-2 text-sm font-semibold text-white transition hover:bg-emerald-900"
+            >
+              {t("manager.shiftOverview.openEditor")}
+            </Link>
           </div>
 
-          <div className="mt-3 space-y-2">
-            {timeRows.map((r) => (
-              <div key={r.name} className="flex items-center justify-between rounded-lg bg-slate-50 p-3">
-                <div>
-                  <div className="text-sm font-medium text-slate-800">{r.name}</div>
-                  <div className="text-xs text-slate-600">
-                    {t("manager.planned")} {r.planned}{" "}
-                    {r.overtime
-                      ? `/ ${t("manager.extendedWork")} ${r.overtime}`
-                      : r.sick
-                        ? `/ ${t("manager.sickAbsence")} ${r.sick}`
-                        : ""}
+          <div className="mt-3 space-y-3">
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+              {[
+                { label: t("manager.shiftOverview.period"), value: "2026/6/1–6/28" },
+                { label: t("manager.shiftOverview.staffCount"), value: `${shiftOverviewRows.length}${t("manager.peopleSuffix")}` },
+                { label: t("manager.shiftOverview.totalWorkdays"), value: `${monthTotal.days}${t("manager.shiftOverview.days")}` },
+                { label: t("manager.shiftOverview.totalHours"), value: `${formatOverviewHours(monthTotal.hours)}${t("manager.shiftOverview.hours")}` },
+              ].map((item) => (
+                <div key={item.label} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
+                  <p className="text-xs text-slate-500">{item.label}</p>
+                  <p className="mt-1 text-lg font-bold text-slate-900">{item.value}</p>
+                </div>
+              ))}
+              <div className="rounded-xl border border-amber-100 bg-amber-50 px-3 py-2.5">
+                <p className="text-xs text-slate-500">{t("manager.shiftOverview.pendingRequests")}</p>
+                <p className="mt-1 text-lg font-bold text-amber-800">
+                  {pendingRequests}
+                  {t("manager.itemsSuffix")}
+                </p>
+              </div>
+            </div>
+
+            <section className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+              <h3 className="text-sm font-semibold text-slate-900">{t("manager.shiftOverview.staffMonthlySummary")}</h3>
+              <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                {monthlyTotals.map((item) => (
+                  <div key={item.name} className="rounded-xl border border-slate-100 bg-white px-3 py-2 shadow-sm">
+                    <p className="truncate text-sm font-semibold text-slate-900">{item.name}</p>
+                    <p className="mt-1 text-xs font-semibold text-emerald-700">
+                      {formatOverviewTotal(item, t)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <section className="rounded-2xl border border-slate-200 bg-slate-50">
+              <div className="border-b border-slate-200 p-3">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-900">{t("manager.shiftOverview.weeklyView")}</h3>
+                    <p className="mt-0.5 text-xs text-slate-500">{selectedWeek.range}</p>
+                  </div>
+                  <div className="flex gap-2 overflow-x-auto pb-0.5">
+                    {shiftOverviewWeeks.map((week, index) => (
+                      <button
+                        key={week.key}
+                        type="button"
+                        onClick={() => setSelectedWeekIndex(index)}
+                        className={`shrink-0 rounded-xl border px-3 py-2 text-xs font-semibold transition ${
+                          selectedWeekIndex === index
+                            ? "border-emerald-700 bg-emerald-800 text-white"
+                            : "border-slate-200 bg-white text-slate-600 hover:border-emerald-300"
+                        }`}
+                      >
+                        <span className="block">{t("manager.shiftOverview.weekLabel")} {index + 1}</span>
+                        <span className="mt-0.5 block font-medium opacity-80">{week.range}</span>
+                      </button>
+                    ))}
                   </div>
                 </div>
-                <div className="text-sm font-semibold text-slate-800">
-                  {t("manager.total")} {r.total}
-                </div>
               </div>
-            ))}
+
+              <div className="overflow-x-auto">
+                <table className="min-w-[760px] border-separate border-spacing-0 text-left text-sm">
+                  <thead>
+                    <tr>
+                      <th className="sticky left-0 z-20 w-36 border-b border-r border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-500">
+                        {t("manager.shiftOverview.employee")}
+                      </th>
+                      {selectedWeek.days.map((day) => (
+                        <th
+                          key={day.key}
+                          className={`w-[76px] border-b border-r border-slate-200 px-2 py-2 text-center ${
+                            day.isToday
+                              ? "bg-emerald-50"
+                              : day.isWeekend
+                                ? "bg-amber-50/70"
+                                : "bg-white"
+                          }`}
+                        >
+                          <span className="block text-xs font-semibold text-slate-900">{day.date}</span>
+                          <span className="mt-0.5 block text-[11px] text-slate-500">{day.weekday}</span>
+                        </th>
+                      ))}
+                      <th className="sticky right-0 z-20 w-28 border-b border-slate-200 bg-slate-50 px-3 py-2 text-right text-xs font-semibold text-slate-500">
+                        {t("manager.shiftOverview.weekTotal")}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {shiftOverviewRows.map((row) => {
+                      const weekShifts = row.shifts.slice(selectedWeek.startIndex, selectedWeek.startIndex + 7);
+                      const weeklyTotal = overviewTotal(weekShifts);
+                      return (
+                        <tr key={`${selectedWeek.key}-${row.name}`} className="group">
+                          <th className="sticky left-0 z-10 border-r border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 group-hover:bg-amber-50">
+                            {row.name}
+                          </th>
+                          {weekShifts.map((shift, index) => (
+                            <td key={`${selectedWeek.key}-${row.name}-${selectedWeek.days[index].key}`} className="border-r border-t border-slate-100 bg-white px-1.5 py-2 text-center group-hover:bg-amber-50/40">
+                              <span
+                                className={`inline-flex min-h-8 w-full items-center justify-center rounded-lg border px-1.5 py-1 text-[11px] font-semibold leading-tight ${shiftCellClass(shift.kind)}`}
+                                title={shift.kind === "none" ? t("manager.shiftOverview.noShift") : shift.kind === "off" ? t("manager.shiftOverview.off") : shift.time}
+                              >
+                                {shift.kind === "none"
+                                  ? "—"
+                                  : shift.kind === "off"
+                                    ? t("manager.shiftOverview.off")
+                                    : shift.time}
+                              </span>
+                            </td>
+                          ))}
+                          <td className="sticky right-0 z-10 border-t border-slate-100 bg-white px-3 py-2 text-right text-xs font-semibold text-slate-800 group-hover:bg-amber-50">
+                            {formatOverviewTotal(weeklyTotal, t)}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </section>
           </div>
+
+          <p className="mt-3 text-xs text-slate-500">{t("manager.shiftOverview.sampleNote")}</p>
         </section>
 
         {/* Quick actions */}
