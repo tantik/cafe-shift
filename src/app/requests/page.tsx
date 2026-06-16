@@ -177,12 +177,12 @@ function RequestsContent() {
         </button>
       </div>
 
-      <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-        <div className="grid grid-cols-7 border-b border-slate-200 text-center text-[10px] font-bold text-slate-500">
+      <section className="overflow-hidden rounded-lg border border-slate-300 bg-white shadow-sm">
+        <div className="grid grid-cols-7 border-b border-slate-300 text-center text-[10px] font-bold text-slate-500">
           {weekdays.map((weekday, index) => (
             <div
               key={weekday}
-              className={`border-r border-slate-100 py-1 last:border-r-0 ${
+              className={`border-r border-slate-300 py-1 last:border-r-0 ${
                 index === 5 ? "bg-sky-50/70" : index === 6 ? "bg-rose-50/60" : ""
               }`}
             >
@@ -201,7 +201,7 @@ function RequestsContent() {
                 type="button"
                 onClick={() => day.isCurrentMonth && openDay(day.key)}
                 disabled={!day.isCurrentMonth}
-                className={`min-h-[44px] border-r border-b border-slate-100 px-1 py-1 text-left last:border-r-0 disabled:bg-slate-50/60 disabled:text-slate-300 ${
+                className={`min-h-[44px] border-r border-b border-slate-300 px-1 py-1 text-left last:border-r-0 disabled:bg-slate-50/60 disabled:text-slate-300 ${
                   day.weekdayIndex === 5 ? "bg-sky-50/40" : day.weekdayIndex === 6 ? "bg-rose-50/35" : "bg-white"
                 }`}
               >
@@ -217,7 +217,7 @@ function RequestsContent() {
         </div>
       </section>
 
-      <label className="block rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+      <label className="block rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
         <span className="text-sm font-bold text-slate-900">{t("requests.shiftRequestMessage")}</span>
         <textarea
           value={message}
@@ -233,7 +233,7 @@ function RequestsContent() {
       <button
         type="button"
         onClick={submitRequests}
-        className="h-11 w-full rounded-xl bg-emerald-800 text-sm font-bold text-white shadow-sm"
+        className="h-11 w-full rounded-lg bg-emerald-800 text-sm font-bold text-white shadow-sm"
       >
         {t("requests.submitShiftRequests")}
       </button>

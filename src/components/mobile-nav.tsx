@@ -24,7 +24,7 @@ export default function MobileNav() {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex min-h-[46px] flex-1 items-center justify-center rounded-xl px-3 text-sm font-medium transition ${
+              className={`flex min-h-[46px] flex-1 items-center justify-center rounded-lg px-3 text-sm font-medium transition ${
                 isActive
                   ? 'bg-green-700 text-white shadow-sm shadow-green-200'
                   : 'bg-slate-100 text-slate-700 hover:bg-slate-200'

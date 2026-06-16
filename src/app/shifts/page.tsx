@@ -123,7 +123,7 @@ function getCoreShift(code: ShiftCode) {
 
 function getShiftCellMeta(shiftCode: WorkerShiftCode) {
   if (shiftCode === "store_closed") {
-    return { marker: "休", label: "休み", time: "", hours: 0, isWorkday: false, className: "border-slate-200 bg-slate-100 text-slate-600" };
+    return { marker: "祝日", label: "休み", time: "", hours: 0, isWorkday: false, className: "border-slate-200 bg-slate-100 text-slate-600" };
   }
   if (shiftCode === "no_shift") {
     return { marker: "-", label: "-", time: "", hours: 0, isWorkday: false, className: "border-slate-100 bg-white text-slate-400" };
@@ -298,7 +298,7 @@ function ShiftsContent() {
         <WeekTable weekNumber={weekOffset + 1} weekDays={weekDays} assignments={assignments} todayKey={todayKey} t={t} />
       </div>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-2.5 shadow-sm">
+      <section className="rounded-lg border border-slate-200 bg-white p-2.5 shadow-sm">
         <h2 className="text-xs font-bold text-slate-900">{t("shifts.legend")}</h2>
         <div className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-[11px]">
           {(["shift_1", "shift_2", "shift_3", "full_day", "store_closed", "vacation"] as WorkerShiftCode[]).map((code) => {
@@ -315,14 +315,14 @@ function ShiftsContent() {
         </div>
       </section>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+      <section className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
         <div>
           <h2 className="text-sm font-bold text-slate-950">{t("shifts.dailyReportTitle")}</h2>
           <p className="mt-0.5 text-xs text-slate-500">{t("shifts.dailyReportSubtitle")}</p>
         </div>
 
         <div className="mt-3 space-y-2">
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <div className="space-y-2">
             <label className="block min-w-0 text-xs font-semibold text-slate-700">
               {t("shifts.reportName")}
               <select
@@ -349,7 +349,7 @@ function ShiftsContent() {
             </label>
           </div>
 
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <div className="grid grid-cols-2 gap-2">
             <label className="block min-w-0 text-xs font-semibold text-slate-700">
               {t("shifts.reportStartTime")}
               <span className="ml-1 text-[10px] font-medium text-slate-400">{t("shifts.reportOneMinuteOk")}</span>
@@ -358,7 +358,7 @@ function ShiftsContent() {
                 step="60"
                 value={reportStartTime}
                 onChange={(event) => setReportStartTime(event.target.value)}
-                className="mt-1 h-9 w-full rounded-lg border border-slate-200 px-2 text-sm text-slate-900"
+                className="mt-1 h-9 w-full min-w-0 rounded-lg border border-slate-200 px-2 text-sm text-slate-900"
               />
             </label>
 
@@ -370,12 +370,12 @@ function ShiftsContent() {
                 step="60"
                 value={reportEndTime}
                 onChange={(event) => setReportEndTime(event.target.value)}
-                className="mt-1 h-9 w-full rounded-lg border border-slate-200 px-2 text-sm text-slate-900"
+                className="mt-1 h-9 w-full min-w-0 rounded-lg border border-slate-200 px-2 text-sm text-slate-900"
               />
             </label>
           </div>
 
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <div className="space-y-2">
             <div className="min-w-0">
               <p className="text-xs font-semibold text-slate-700">{t("shifts.reportBreakTime")}</p>
               <div className="mt-1 grid grid-cols-3 gap-1">
