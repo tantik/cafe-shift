@@ -3,80 +3,115 @@
 import { useMemo, useState } from "react";
 import AppShell from "@/components/app-shell";
 import { useI18n } from "@/lib/i18n/use-i18n";
+import { DEMO_START_DATE, shiftTypes as coreShiftTypes } from "@/lib/mock-data/core";
+import type { ShiftCode } from "@/types/domain";
 
-// Stable mock today for demo (deterministic across server/client)
-const MOCK_TODAY = "2026-06-01";
-const TARGET_YEAR = 2026;
-const TARGET_MONTH_INDEX = 5;
-const TARGET_MONTH_LABEL = "6月";
+type RequestShiftCode = "shift_1" | "shift_2" | "shift_3" | "full_day" | "store_closed" | "vacation" | "none";
 
-type RequestTab = "shift" | "vacation";
-type RequestOption = "1シフト" | "2シフト" | "通しシフト" | "休み希望";
-type VacationType = "休暇" | "病欠" | "その他";
-
-type VacationRequest = {
-  id: string;
-  date: string;
-  type: VacationType;
-  reason: string;
-  memo: string;
-  status: "未確認";
+type CalendarDay = {
+  key: string;
+  day: number;
+  weekdayIndex: number;
+  isCurrentMonth: boolean;
 };
 
-const vacationTypes: VacationType[] = ["休暇", "病欠", "その他"];
-const initialVacationRequests: VacationRequest[] = [
-  {
-    id: "vacation-request-001",
-    date: "2026-06-10",
-    type: "休暇",
-    reason: "家庭の都合",
-    memo: "午前中に用事があります",
-    status: "未確認",
-  },
-];
+const weekdays = ["月", "火", "水", "木", "金", "土", "日"];
+const baseDate = parseDateKey(DEMO_START_DATE);
+const initialMonthOffset = 1;
 
-function generateDates(start: Date, count: number) {
-  const arr: Date[] = [];
-  for (let i = 0; i < count; i++) {
-    const d = new Date(start);
-    d.setDate(d.getDate() + i);
-    arr.push(d);
-  }
-  return arr;
-}
+const requestOptions: RequestShiftCode[] = ["shift_1", "shift_2", "shift_3", "full_day", "store_closed", "vacation", "none"];
 
-function generateMonthDates(year: number, monthIndex: number) {
-  const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
-  return generateDates(new Date(year, monthIndex, 1), daysInMonth);
-}
-
-function orderForTwoRowCalendar(monthDates: Date[]) {
-  const orderedDates: Date[] = [];
-  for (let chunkStart = 0; chunkStart < monthDates.length; chunkStart += 14) {
-    const chunk = monthDates.slice(chunkStart, chunkStart + 14);
-    for (let index = 0; index < 7; index++) {
-      if (chunk[index]) {
-        orderedDates.push(chunk[index]);
-      }
-      if (chunk[index + 7]) {
-        orderedDates.push(chunk[index + 7]);
-      }
-    }
-  }
-  return orderedDates;
-}
-
-function formatKey(date: Date) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(
-    date.getDate()
-  ).padStart(2, "0")}`;
-}
-function dateFromKey(dateKey: string) {
+function parseDateKey(dateKey: string) {
   const [year, month, day] = dateKey.split("-").map(Number);
-  if (!year || !month || !day) {
-    return null;
+  return new Date(Date.UTC(year, month - 1, day));
+}
+
+function formatDateKey(date: Date) {
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`;
+}
+
+function getMonthStart(monthOffset: number) {
+  return new Date(Date.UTC(baseDate.getUTCFullYear(), baseDate.getUTCMonth() + monthOffset, 1));
+}
+
+function getMonthLabel(monthStart: Date) {
+  return `${monthStart.getUTCFullYear()}年${monthStart.getUTCMonth() + 1}月`;
+}
+
+function getCalendarDays(monthStart: Date): CalendarDay[] {
+  const year = monthStart.getUTCFullYear();
+  const monthIndex = monthStart.getUTCMonth();
+  const firstDay = new Date(Date.UTC(year, monthIndex, 1));
+  const firstWeekdayIndex = (firstDay.getUTCDay() + 6) % 7;
+  const gridStart = new Date(firstDay);
+  gridStart.setUTCDate(firstDay.getUTCDate() - firstWeekdayIndex);
+
+  return Array.from({ length: 42 }, (_, index) => {
+    const date = new Date(gridStart);
+    date.setUTCDate(gridStart.getUTCDate() + index);
+    return {
+      key: formatDateKey(date),
+      day: date.getUTCDate(),
+      weekdayIndex: (date.getUTCDay() + 6) % 7,
+      isCurrentMonth: date.getUTCMonth() === monthIndex,
+    };
+  });
+}
+
+function getCoreShift(code: ShiftCode) {
+  return coreShiftTypes.find((shift) => shift.code === code);
+}
+
+function getRequestMeta(code: RequestShiftCode) {
+  if (code === "none") {
+    return { marker: "-", label: "-", detail: "", className: "border-slate-100 bg-white text-slate-400" };
   }
-  return new Date(year, month - 1, day);
+  if (code === "store_closed") {
+    return { marker: "休", label: "休み", detail: "休み", className: "border-sky-100 bg-sky-50 text-sky-700" };
+  }
+
+  const shiftCode = code as Exclude<ShiftCode, "sick" | "off">;
+  const shift = getCoreShift(shiftCode);
+  const markerByCode: Record<Exclude<ShiftCode, "sick" | "off">, string> = {
+    shift_1: "1",
+    shift_2: "2",
+    shift_3: "3",
+    full_day: "通",
+    vacation: "休暇",
+  };
+  const styles: Record<Exclude<ShiftCode, "sick" | "off">, string> = {
+    shift_1: "border-sky-200 bg-sky-50 text-sky-800",
+    shift_2: "border-orange-200 bg-orange-50 text-orange-800",
+    shift_3: "border-yellow-200 bg-yellow-50 text-yellow-800",
+    full_day: "border-emerald-200 bg-emerald-50 text-emerald-800",
+    vacation: "border-pink-100 bg-pink-50/70 text-pink-700",
+  };
+
+  return {
+    marker: markerByCode[shiftCode],
+    label: shift?.label ?? markerByCode[shiftCode],
+    detail: shift?.startTime && shift.endTime ? `${shift.startTime}〜${shift.endTime}` : "休暇",
+    className: styles[shiftCode],
+  };
+}
+
+function formatModalDate(dateKey: string) {
+  const date = parseDateKey(dateKey);
+  const weekday = weekdays[(date.getUTCDay() + 6) % 7];
+  return `${date.getUTCMonth() + 1}/${date.getUTCDate()}（${weekday}）`;
+}
+
+function optionLabelKey(option: RequestShiftCode) {
+  const keys: Record<RequestShiftCode, string> = {
+    shift_1: "requests.shiftOption1",
+    shift_2: "requests.shiftOption2",
+    shift_3: "requests.shiftOption3",
+    full_day: "requests.shiftOptionFull",
+    store_closed: "requests.shiftOptionOff",
+    vacation: "requests.shiftOptionVacation",
+    none: "requests.shiftOptionNone",
+  };
+  return keys[option];
 }
 
 export default function RequestsPage() {
@@ -89,468 +124,173 @@ export default function RequestsPage() {
 
 function RequestsContent() {
   const { t } = useI18n();
-  // target month start (mock)
-  const dates = useMemo(() => generateMonthDates(TARGET_YEAR, TARGET_MONTH_INDEX), []);
-  const calendarDates = useMemo(() => orderForTwoRowCalendar(dates), [dates]);
-  // use stable mock today key to avoid server/client mismatch
-  const todayKey = MOCK_TODAY;
+  const [monthOffset, setMonthOffset] = useState(initialMonthOffset);
+  const [requests, setRequests] = useState<Record<string, RequestShiftCode>>({});
+  const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null);
+  const [draftSelection, setDraftSelection] = useState<RequestShiftCode>("none");
+  const [message, setMessage] = useState("");
+  const [success, setSuccess] = useState("");
 
-  // requests stored as map dateKey -> RequestOption | null
-  const [requests, setRequests] = useState<Record<string, RequestOption | null>>({});
-  const [activeTab, setActiveTab] = useState<RequestTab>("shift");
+  const monthStart = useMemo(() => getMonthStart(monthOffset), [monthOffset]);
+  const calendarDays = useMemo(() => getCalendarDays(monthStart), [monthStart]);
+  const monthLabel = getMonthLabel(monthStart);
 
-  const [modalOpen, setModalOpen] = useState(false);
-  const [activeDateKey, setActiveDateKey] = useState<string | null>(null);
-  const [tempSelection, setTempSelection] = useState<RequestOption | null>("休み希望");
-
-  const [comment, setComment] = useState("");
-  const [notice, setNotice] = useState<string | null>(null);
-  const [vacationDate, setVacationDate] = useState(MOCK_TODAY);
-  const [vacationType, setVacationType] = useState<VacationType>("休暇");
-  const [vacationReason, setVacationReason] = useState("");
-  const [vacationMemo, setVacationMemo] = useState("");
-  const [vacationRequests, setVacationRequests] = useState(initialVacationRequests);
-  const [nextVacationRequestNumber, setNextVacationRequestNumber] = useState(2);
-  const [vacationError, setVacationError] = useState("");
-  const [vacationSuccess, setVacationSuccess] = useState("");
-
-  function openForDate(date: Date) {
-    const key = formatKey(date);
-    setActiveDateKey(key);
-    // default highlight 休み希望 if no existing request
-    const existing = requests[key] ?? null;
-    setTempSelection(existing ?? "休み希望");
-    setModalOpen(true);
+  function openDay(dateKey: string) {
+    setSelectedDateKey(dateKey);
+    setDraftSelection(requests[dateKey] ?? "none");
   }
 
-  function confirmSelection() {
-    if (!activeDateKey) return;
-    setRequests((prev) => ({ ...prev, [activeDateKey]: tempSelection }));
-    setModalOpen(false);
-  }
-
-  function clearSelection() {
-    if (!activeDateKey) return;
-    setRequests((prev) => {
-      const next = { ...prev };
-      delete next[activeDateKey];
-      return next;
-    });
-    setModalOpen(false);
-  }
-
-  function submitAll() {
-    // mock submit
-    setNotice(t("requests.shift.success"));
-    setTimeout(() => setNotice(null), 3000);
-  }
-
-  function submitVacationRequest() {
-    setVacationError("");
-    setVacationSuccess("");
-
-    if (!vacationDate) {
-      setVacationError(t("requests.vacation.validationDateRequired"));
+  function saveSelection() {
+    if (!selectedDateKey) {
       return;
     }
-    if (!vacationType) {
-      setVacationError(t("requests.vacation.validationTypeRequired"));
-      return;
-    }
-    if (!vacationReason.trim()) {
-      setVacationError(t("requests.vacation.validationReasonRequired"));
-      return;
-    }
-
-    const request: VacationRequest = {
-      id: `vacation-request-${String(nextVacationRequestNumber).padStart(3, "0")}`,
-      date: vacationDate,
-      type: vacationType,
-      reason: vacationReason.trim(),
-      memo: vacationMemo.trim(),
-      status: "未確認",
-    };
-
-    setVacationRequests((current) => [request, ...current]);
-    setNextVacationRequestNumber((current) => current + 1);
-    setVacationSuccess(t("requests.vacation.success"));
-    setVacationReason("");
-    setVacationMemo("");
+    setRequests((current) => ({ ...current, [selectedDateKey]: draftSelection }));
+    setSelectedDateKey(null);
   }
 
-  function requestOptionLabel(option: RequestOption) {
-    if (option === "1シフト") return t("requests.optionShift1");
-    if (option === "2シフト") return t("requests.optionShift2");
-    if (option === "通しシフト") return t("requests.optionFullDay");
-    return t("requests.optionOff");
+  function submitRequests() {
+    setSuccess(t("requests.shiftRequestsSuccessDemo"));
   }
-
-  function requestOptionDescription(option: RequestOption) {
-    if (option === "1シフト") return "08:30–13:00";
-    if (option === "2シフト") return "13:00–17:30";
-    if (option === "通しシフト") return "08:30–17:30";
-    return t("requests.optionOffDescription");
-  }
-
-  function vacationTypeLabel(type: VacationType) {
-    if (type === "休暇") return t("requests.vacation.typeVacation");
-    if (type === "病欠") return t("requests.vacation.typeSick");
-    return t("requests.vacation.typeOther");
-  }
-
-  function shortWeekday(date: Date) {
-    const keys = [
-      "weekday.short.sun",
-      "weekday.short.mon",
-      "weekday.short.tue",
-      "weekday.short.wed",
-      "weekday.short.thu",
-      "weekday.short.fri",
-      "weekday.short.sat",
-    ];
-    return t(keys[date.getDay()]);
-  }
-
-  function longWeekday(date: Date) {
-    const keys = [
-      "weekday.long.sun",
-      "weekday.long.mon",
-      "weekday.long.tue",
-      "weekday.long.wed",
-      "weekday.long.thu",
-      "weekday.long.fri",
-      "weekday.long.sat",
-    ];
-    return t(keys[date.getDay()]);
-  }
-
-  function formatMonthDay(date: Date) {
-    return `${date.getMonth() + 1}月${date.getDate()}日`;
-  }
-
-  function formatDateWithWeekday(date: Date) {
-    return `${formatMonthDay(date)}（${shortWeekday(date)}）`;
-  }
-
-  function formatDateKeyWithWeekday(dateKey: string) {
-    const date = dateFromKey(dateKey);
-    return date ? formatDateWithWeekday(date) : dateKey;
-  }
-
-  function formatMonthRequestsTitle() {
-    return t("requests.monthRequests")
-      .replace("{monthLabel}", TARGET_MONTH_LABEL)
-      .replace("{days}", String(dates.length));
-  }
-
-  const selectedList = Object.entries(requests)
-    .filter(([, v]) => v)
-    .map(([k, v]) => ({ dateKey: k, label: v as RequestOption }))
-    .sort((a, b) => (a.dateKey > b.dateKey ? 1 : -1));
-  const activeDate = activeDateKey ? dateFromKey(activeDateKey) : null;
 
   return (
-    <div className="space-y-5 pb-6">
-        {/* Header */}
-        <header className="rounded-2xl bg-gradient-to-br from-amber-50 to-rose-50 p-5 shadow-sm">
-          <h1 className="text-2xl font-semibold text-slate-900">{t("requests.title")}</h1>
-          <p className="mt-1 text-sm text-slate-600">{t("requests.subtitle")}</p>
-          <div className="mt-3 inline-flex items-center gap-3 rounded-full bg-white/90 px-3 py-2 shadow-sm">
-            <div className="h-8 w-8 flex-none rounded-full bg-green-700 text-white flex items-center justify-center text-xs font-semibold">YH</div>
-            <div className="text-sm font-medium">山田 花子</div>
-          </div>
-        </header>
+    <div className="space-y-3 pb-4">
+      <div>
+        <h1 className="text-xl font-bold text-slate-950">{t("requests.shiftRequestsTitle")}</h1>
+        <p className="mt-0.5 text-sm text-slate-600">{t("requests.shiftRequestsSubtitle")}</p>
+      </div>
 
-        <section className="rounded-2xl border border-amber-100 bg-amber-50 p-4 shadow-sm">
-          <p className="font-semibold text-slate-900">{t("requests.explanationTitle")}</p>
-          <p className="mt-1 text-sm text-slate-600">{t("requests.explanationText")}</p>
-        </section>
+      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-1.5">
+        <button
+          type="button"
+          onClick={() => setMonthOffset((current) => current - 1)}
+          className="rounded-lg border border-slate-200 bg-white px-2 py-2 text-[11px] font-semibold text-slate-700 shadow-sm"
+        >
+          {t("requests.previousMonth")}
+        </button>
+        <span className="min-w-[96px] text-center text-sm font-bold text-slate-950">{monthLabel}</span>
+        <button
+          type="button"
+          onClick={() => setMonthOffset((current) => current + 1)}
+          className="rounded-lg border border-slate-200 bg-white px-2 py-2 text-[11px] font-semibold text-slate-700 shadow-sm"
+        >
+          {t("requests.nextMonth")}
+        </button>
+      </div>
 
-        <section className="rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
-          <div className="grid grid-cols-2 gap-2">
-            {[
-              { id: "shift" as const, label: t("requests.shiftTab") },
-              { id: "vacation" as const, label: t("requests.vacationTab") },
-            ].map((tab) => (
+      <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div className="grid grid-cols-7 border-b border-slate-200 text-center text-[10px] font-bold text-slate-500">
+          {weekdays.map((weekday, index) => (
+            <div
+              key={weekday}
+              className={`border-r border-slate-100 py-1 last:border-r-0 ${
+                index === 5 ? "bg-sky-50/70" : index === 6 ? "bg-rose-50/60" : ""
+              }`}
+            >
+              {weekday}
+            </div>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-7">
+          {calendarDays.map((day) => {
+            const request = requests[day.key] ?? "none";
+            const meta = getRequestMeta(request);
+            return (
               <button
-                key={tab.id}
+                key={day.key}
                 type="button"
-                onClick={() => setActiveTab(tab.id)}
-                className={`rounded-xl border px-4 py-2.5 text-sm font-semibold transition ${
-                  activeTab === tab.id
-                    ? "border-emerald-700 bg-emerald-800 text-white"
-                    : "border-transparent bg-slate-50 text-slate-600"
+                onClick={() => day.isCurrentMonth && openDay(day.key)}
+                disabled={!day.isCurrentMonth}
+                className={`min-h-[44px] border-r border-b border-slate-100 px-1 py-1 text-left last:border-r-0 disabled:bg-slate-50/60 disabled:text-slate-300 ${
+                  day.weekdayIndex === 5 ? "bg-sky-50/40" : day.weekdayIndex === 6 ? "bg-rose-50/35" : "bg-white"
                 }`}
               >
-                {tab.label}
+                <span className={`block text-[10px] font-bold leading-none ${day.isCurrentMonth ? "text-slate-700" : "text-slate-300"}`}>
+                  {day.day}
+                </span>
+                <span className={`mt-1 flex h-5 items-center justify-center border text-[10px] font-bold leading-none ${meta.className}`}>
+                  {day.isCurrentMonth ? meta.marker : ""}
+                </span>
               </button>
-            ))}
-          </div>
-        </section>
+            );
+          })}
+        </div>
+      </section>
 
-        {activeTab === "shift" ? (
-          <>
-            {/* Month Card */}
-            <div className="rounded-2xl bg-white p-4 shadow-sm border border-slate-100">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-sm text-slate-500">{t("requests.targetMonth")}</div>
-                  <div className="mt-1 font-semibold text-slate-900">{t("requests.targetMonthValue")}</div>
-                </div>
-                <div className="inline-flex items-center gap-2">
-                  <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
-                    {t("requests.unsubmitted")}
-                  </span>
-                </div>
-              </div>
-              <p className="mt-3 text-sm text-slate-600">{t("requests.afterSubmitNote")}</p>
-            </div>
+      <label className="block rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+        <span className="text-sm font-bold text-slate-900">{t("requests.shiftRequestMessage")}</span>
+        <textarea
+          value={message}
+          onChange={(event) => setMessage(event.target.value)}
+          placeholder={t("requests.shiftRequestMessagePlaceholder")}
+          rows={3}
+          className="mt-2 w-full rounded-lg border border-slate-200 px-2 py-2 text-sm text-slate-900"
+        />
+      </label>
 
-            {/* Full month calendar */}
-            <section>
-              <h2 className="text-lg font-semibold text-slate-900">{formatMonthRequestsTitle()}</h2>
-              <p className="text-sm text-slate-500 mt-1">{t("requests.tapDateHint")}</p>
+      {success ? <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700">{success}</p> : null}
 
-              <div className="mt-3 overflow-x-auto pb-2">
-                <div className="grid grid-flow-col grid-rows-2 auto-cols-[72px] gap-2">
-                  {calendarDates.map((d) => {
-                    const key = formatKey(d);
-                    const req = requests[key] ?? null;
-                    const isRequested = !!req;
-                    const isToday = key === todayKey;
-                    return (
-                      <button
-                        key={key}
-                        type="button"
-                        onClick={() => openForDate(d)}
-                        aria-label={`${formatDateWithWeekday(d)} ${req ? requestOptionLabel(req) : t("requests.shift.unselected")}`}
-                        className={`min-h-[96px] rounded-xl p-2 text-left shadow-sm transition ${
-                          isToday
-                            ? "border-2 border-amber-400 bg-amber-50"
-                            : isRequested
-                              ? "border border-amber-200 bg-amber-50"
-                              : "border border-slate-100 bg-white"
-                        }`}
-                      >
-                        <div className="flex items-start justify-between gap-1">
-                          <div>
-                            <div className="text-sm font-semibold text-slate-800">{d.getDate()}日</div>
-                            <div className="mt-0.5 text-xs font-medium text-slate-500">{shortWeekday(d)}</div>
-                          </div>
-                          {isToday ? (
-                            <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-semibold text-amber-900">
-                              {t("requests.today")}
-                            </span>
-                          ) : null}
-                        </div>
-                        <div className="mt-2 line-clamp-2 text-[11px] font-medium leading-4 text-slate-600">
-                          {req ? requestOptionLabel(req) : t("requests.shift.unselected")}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </section>
+      <button
+        type="button"
+        onClick={submitRequests}
+        className="h-11 w-full rounded-xl bg-emerald-800 text-sm font-bold text-white shadow-sm"
+      >
+        {t("requests.submitShiftRequests")}
+      </button>
 
-            {/* Selected requests summary */}
-            <section className="rounded-2xl bg-white p-4 shadow-sm border border-slate-100">
-              <h3 className="font-semibold text-slate-900">{t("requests.shift.selectedTitle")}</h3>
-              <div className="mt-3">
-                {selectedList.length === 0 ? (
-                  <p className="text-sm text-slate-500">{t("requests.shift.emptySelected")}</p>
-                ) : (
-                  <div className="max-h-[240px] overflow-y-auto pr-2">
-                    <ul className="space-y-2">
-                      {selectedList.map((s) => (
-                        <li key={s.dateKey} className="flex items-center justify-between rounded-lg bg-slate-50 p-3">
-                          <div>
-                            <div className="text-sm font-medium text-slate-800">{formatDateKeyWithWeekday(s.dateKey)}</div>
-                            <div className="text-xs text-slate-600">{requestOptionLabel(s.label)}</div>
-                          </div>
-                          <div className="text-xs text-slate-500">{t("requests.shift.edit")}</div>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            </section>
+      {selectedDateKey ? (
+        <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
+          <button
+            type="button"
+            aria-label={t("requests.cancel")}
+            className="absolute inset-0 bg-slate-950/35"
+            onClick={() => setSelectedDateKey(null)}
+          />
+          <div className="relative w-full max-w-[430px] rounded-t-2xl bg-white p-4 shadow-xl sm:rounded-2xl">
+            <h2 className="text-base font-bold text-slate-950">
+              {t("requests.selectShiftForDate").replace("{date}", formatModalDate(selectedDateKey))}
+            </h2>
 
-            {/* Comment box */}
-            <div className="rounded-2xl bg-white p-3 shadow-sm border border-slate-100">
-              <label className="text-sm font-medium text-slate-800">
-                {t("requests.shift.comment")}（{t("common.optional")}）
-              </label>
-              <textarea
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                placeholder={t("requests.shift.commentPlaceholder")}
-                className="mt-2 w-full resize-none rounded-lg border border-slate-100 p-3 text-sm"
-                rows={3}
-              />
-            </div>
-
-            {/* Submit button */}
-            <div className="space-y-2">
-              <button
-                onClick={submitAll}
-                className="w-full rounded-3xl bg-gradient-to-r from-green-700 to-green-800 px-4 py-3 text-white font-semibold shadow-md"
-              >
-                {t("requests.shift.submit")}
-              </button>
-              {notice && <div className="text-center text-sm text-emerald-600">{notice}</div>}
-            </div>
-          </>
-        ) : (
-          <>
-            <section className="space-y-4 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
-              <h2 className="font-semibold text-slate-900">{t("requests.vacation.title")}</h2>
-              <label className="block text-sm font-semibold text-slate-800">
-                {t("requests.vacation.date")}
-                <input
-                  type="date"
-                  value={vacationDate}
-                  onChange={(event) => setVacationDate(event.target.value)}
-                  className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm"
-                />
-              </label>
-
-              <div>
-                <p className="text-sm font-semibold text-slate-800">{t("requests.vacation.type")}</p>
-                <div className="mt-2 grid grid-cols-3 gap-2">
-                  {vacationTypes.map((type) => (
-                    <button
-                      key={type}
-                      type="button"
-                      onClick={() => setVacationType(type)}
-                      className={`rounded-xl border px-3 py-2 text-sm font-semibold ${
-                        vacationType === type
-                          ? "border-emerald-700 bg-emerald-800 text-white"
-                          : "border-slate-200 bg-slate-50 text-slate-700"
-                      }`}
-                    >
-                      {vacationTypeLabel(type)}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <label className="block text-sm font-semibold text-slate-800">
-                {t("requests.vacation.reason")}
-                <textarea
-                  value={vacationReason}
-                  onChange={(event) => setVacationReason(event.target.value)}
-                  placeholder={t("requests.vacation.reasonPlaceholder")}
-                  rows={3}
-                  className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm"
-                />
-              </label>
-
-              <label className="block text-sm font-semibold text-slate-800">
-                {t("requests.vacation.memo")}（{t("common.optional")}）
-                <textarea
-                  value={vacationMemo}
-                  onChange={(event) => setVacationMemo(event.target.value)}
-                  placeholder={t("requests.vacation.memoPlaceholder")}
-                  rows={3}
-                  className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm"
-                />
-              </label>
-
-              {vacationError ? (
-                <p className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700">{vacationError}</p>
-              ) : null}
-              {vacationSuccess ? (
-                <p className="rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{vacationSuccess}</p>
-              ) : null}
-
-              <button
-                type="button"
-                onClick={submitVacationRequest}
-                className="w-full rounded-3xl bg-gradient-to-r from-green-700 to-green-800 px-4 py-3 font-semibold text-white shadow-md"
-              >
-                {t("requests.vacation.submit")}
-              </button>
-            </section>
-
-            <section className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
-              <h3 className="font-semibold text-slate-900">{t("requests.vacation.recentTitle")}</h3>
-              <div className="mt-3 space-y-2">
-                {vacationRequests.map((request) => (
-                  <article key={request.id} className="rounded-xl bg-slate-50 p-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-semibold text-slate-900">{request.date}</p>
-                        <p className="mt-1 text-xs text-slate-600">{vacationTypeLabel(request.type)}</p>
-                      </div>
-                      <span className="rounded-full bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-800">
-                        {t("requests.vacation.statusPending")}
-                      </span>
-                    </div>
-                    <p className="mt-2 text-sm text-slate-700">{request.reason}</p>
-                    {request.memo ? (
-                      <p className="mt-1 text-xs text-slate-500">
-                        {t("requests.vacation.memo")}: {request.memo}
-                      </p>
-                    ) : null}
-                  </article>
-                ))}
-              </div>
-            </section>
-          </>
-        )}
-
-        <p className="text-xs text-slate-500">{t("common.demoNote")}</p>
-
-        {/* Modal / Bottom sheet */}
-        {modalOpen && activeDateKey && (
-          <div className="fixed inset-0 z-50 flex items-end justify-center">
-            <div className="absolute inset-0 bg-black/30" onClick={() => setModalOpen(false)} />
-            <div className="relative w-full max-w-[430px] rounded-t-2xl bg-white p-4 shadow-xl">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-sm font-semibold text-slate-700">
-                    {activeDate ? formatDateWithWeekday(activeDate) : activeDateKey}
-                  </div>
-                  {activeDate ? <div className="text-xs text-slate-500">{longWeekday(activeDate)}</div> : null}
-                  <div className="text-xs text-slate-500">{t("requests.shift.modalHint")}</div>
-                </div>
-                <button onClick={() => setModalOpen(false)} className="text-sm text-slate-500">{t("common.close")}</button>
-              </div>
-
-              <div className="mt-4 space-y-3">
-                {(["1シフト", "2シフト", "通しシフト", "休み希望"] as RequestOption[]).map((opt) => (
+            <div className="mt-3 space-y-1.5">
+              {requestOptions.map((option) => {
+                const meta = getRequestMeta(option);
+                return (
                   <button
-                    key={opt}
-                    onClick={() => setTempSelection(opt)}
-                    className={`w-full rounded-xl px-4 py-3 text-left ${
-                      tempSelection === opt ? 'bg-green-50 border border-green-200' : 'bg-slate-50'
+                    key={option}
+                    type="button"
+                    onClick={() => setDraftSelection(option)}
+                    className={`flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left ${
+                      draftSelection === option ? "border-emerald-600 bg-emerald-50" : "border-slate-200 bg-white"
                     }`}
                   >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="font-medium text-slate-800">{requestOptionLabel(opt)}</div>
-                        <div className="text-xs text-slate-500">{requestOptionDescription(opt)}</div>
-                      </div>
-                      {tempSelection === opt && <div className="text-green-700 font-semibold">{t("requests.shift.selected")}</div>}
-                    </div>
+                    <span className={`inline-flex min-w-9 justify-center rounded border px-1 py-0.5 text-xs font-bold ${meta.className}`}>
+                      {meta.marker}
+                    </span>
+                    <span className="text-sm font-semibold text-slate-800">{t(optionLabelKey(option))}</span>
                   </button>
-                ))}
+                );
+              })}
+            </div>
 
-                <div className="flex gap-2">
-                  <button onClick={clearSelection} className="flex-1 rounded-xl bg-slate-100 px-4 py-3">{t("requests.shift.clear")}</button>
-                  <button
-                    onClick={confirmSelection}
-                    className="flex-1 rounded-xl bg-gradient-to-r from-amber-600 to-amber-700 text-white font-semibold"
-                  >
-                    {requests[activeDateKey] ? t("requests.shift.change") : t("requests.shift.confirm")}
-                  </button>
-                </div>
-              </div>
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setSelectedDateKey(null)}
+                className="h-10 rounded-lg border border-slate-200 bg-white text-sm font-bold text-slate-700"
+              >
+                {t("requests.cancel")}
+              </button>
+              <button
+                type="button"
+                onClick={saveSelection}
+                className="h-10 rounded-lg bg-emerald-800 text-sm font-bold text-white"
+              >
+                {t("requests.save")}
+              </button>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      ) : null}
+    </div>
   );
 }

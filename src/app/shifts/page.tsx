@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
+import { useEffect, useMemo, useRef, useState } from "react";
 import AppShell from "@/components/app-shell";
 import { useI18n } from "@/lib/i18n/use-i18n";
 import { DEMO_START_DATE, shiftTypes as coreShiftTypes } from "@/lib/mock-data/core";
@@ -204,6 +203,7 @@ function ShiftsContent() {
   const [reportMessage, setReportMessage] = useState("");
   const [reportError, setReportError] = useState("");
   const [reportSuccess, setReportSuccess] = useState("");
+  const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
 
   const weekStart = addDays(baseWeekStart, weekOffset * 7);
   const weekDays = useMemo(() => getWeekDays(weekStart), [weekStart]);
@@ -244,6 +244,26 @@ function ShiftsContent() {
     setReportMessage("");
   }
 
+  function handleSwipeStart(clientX: number, clientY: number) {
+    swipeStartRef.current = { x: clientX, y: clientY };
+  }
+
+  function handleSwipeEnd(clientX: number, clientY: number) {
+    const start = swipeStartRef.current;
+    swipeStartRef.current = null;
+    if (!start) {
+      return;
+    }
+
+    const deltaX = clientX - start.x;
+    const deltaY = clientY - start.y;
+    if (Math.abs(deltaX) < 50 || Math.abs(deltaX) < Math.abs(deltaY) * 1.4) {
+      return;
+    }
+
+    setWeekOffset((current) => current + (deltaX < 0 ? 1 : -1));
+  }
+
   return (
     <div className="space-y-3 pb-4">
       <div className="space-y-2">
@@ -267,7 +287,16 @@ function ShiftsContent() {
         </div>
       </div>
 
-      <WeekTable weekNumber={weekOffset + 1} weekDays={weekDays} assignments={assignments} todayKey={todayKey} t={t} />
+      <div
+        onPointerDown={(event) => handleSwipeStart(event.clientX, event.clientY)}
+        onPointerUp={(event) => handleSwipeEnd(event.clientX, event.clientY)}
+        onPointerCancel={() => {
+          swipeStartRef.current = null;
+        }}
+        className="touch-pan-y"
+      >
+        <WeekTable weekNumber={weekOffset + 1} weekDays={weekDays} assignments={assignments} todayKey={todayKey} t={t} />
+      </div>
 
       <section className="rounded-xl border border-slate-200 bg-white p-2.5 shadow-sm">
         <h2 className="text-xs font-bold text-slate-900">{t("shifts.legend")}</h2>
@@ -410,14 +439,6 @@ function ShiftsContent() {
         </div>
       </section>
 
-      <Link
-        href="#"
-        aria-disabled="true"
-        className="block rounded-xl border border-slate-200 bg-white px-4 py-3 text-center text-sm font-bold text-slate-800 shadow-sm"
-      >
-        {t("shifts.archive")}
-        <span className="mt-0.5 block text-[10px] font-semibold text-slate-400">{t("shifts.comingSoon")}</span>
-      </Link>
     </div>
   );
 }
