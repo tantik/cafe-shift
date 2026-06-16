@@ -322,8 +322,8 @@ function ShiftsContent() {
         </div>
 
         <div className="mt-3 space-y-2">
-          <div className="grid grid-cols-2 gap-2">
-            <label className="block text-xs font-semibold text-slate-700">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <label className="block min-w-0 text-xs font-semibold text-slate-700">
               {t("shifts.reportName")}
               <select
                 value={reportName}
@@ -338,7 +338,7 @@ function ShiftsContent() {
               </select>
             </label>
 
-            <label className="block text-xs font-semibold text-slate-700">
+            <label className="block min-w-0 text-xs font-semibold text-slate-700">
               {t("shifts.reportDate")}
               <input
                 type="date"
@@ -349,8 +349,8 @@ function ShiftsContent() {
             </label>
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
-            <label className="block text-xs font-semibold text-slate-700">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <label className="block min-w-0 text-xs font-semibold text-slate-700">
               {t("shifts.reportStartTime")}
               <span className="ml-1 text-[10px] font-medium text-slate-400">{t("shifts.reportOneMinuteOk")}</span>
               <input
@@ -362,7 +362,7 @@ function ShiftsContent() {
               />
             </label>
 
-            <label className="block text-xs font-semibold text-slate-700">
+            <label className="block min-w-0 text-xs font-semibold text-slate-700">
               {t("shifts.reportEndTime")}
               <span className="ml-1 text-[10px] font-medium text-slate-400">{t("shifts.reportOneMinuteOk")}</span>
               <input
@@ -375,8 +375,8 @@ function ShiftsContent() {
             </label>
           </div>
 
-          <div className="grid grid-cols-[1fr_104px] gap-2">
-            <div>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <div className="min-w-0">
               <p className="text-xs font-semibold text-slate-700">{t("shifts.reportBreakTime")}</p>
               <div className="mt-1 grid grid-cols-3 gap-1">
                 {(["0", "30", "60"] as BreakMinutes[]).map((minutes) => (
@@ -397,7 +397,7 @@ function ShiftsContent() {
               </div>
             </div>
 
-            <label className="block text-xs font-semibold text-slate-700">
+            <label className="block min-w-0 text-xs font-semibold text-slate-700">
               {t("shifts.reportTransportation")}
               <div className="mt-1 flex h-9 items-center rounded-lg border border-slate-200 bg-white px-2">
                 <input

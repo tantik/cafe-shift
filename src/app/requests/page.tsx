@@ -246,7 +246,7 @@ function RequestsContent() {
             className="absolute inset-0 bg-slate-950/35"
             onClick={() => setSelectedDateKey(null)}
           />
-          <div className="relative w-full max-w-[430px] rounded-t-2xl bg-white p-4 shadow-xl sm:rounded-2xl">
+          <div className="relative w-full max-w-[430px] rounded-t-xl bg-white p-4 shadow-xl sm:rounded-xl">
             <h2 className="text-base font-bold text-slate-950">
               {t("requests.selectShiftForDate").replace("{date}", formatModalDate(selectedDateKey))}
             </h2>

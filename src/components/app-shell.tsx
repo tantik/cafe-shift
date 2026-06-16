@@ -20,7 +20,7 @@ export default function AppShell({
     <I18nProvider>
       <div className="min-h-screen bg-[#f7f1e6] text-slate-900">
         <div className={`mx-auto flex min-h-screen flex-col pb-24 pt-6 ${widthClass}`}>
-          <header className="mb-4 rounded-3xl bg-white/90 px-3.5 py-3 shadow-sm shadow-slate-200 backdrop-blur-sm">
+          <header className="mb-4 rounded-2xl bg-white/90 px-3.5 py-3 shadow-sm shadow-slate-200 backdrop-blur-sm">
             <div className="flex items-center justify-between gap-3">
               <Link
                 href="/"
