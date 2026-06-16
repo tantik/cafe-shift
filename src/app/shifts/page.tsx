@@ -28,8 +28,11 @@ type Assignment = {
   shift: WorkerShiftCode;
 };
 
+type BreakMinutes = "0" | "30" | "60";
+
 const selfEmployeeId = "ly";
 const baseWeekStart = DEMO_START_DATE;
+const defaultReportDate = addDays(baseWeekStart, 14);
 const weekdays = ["月", "火", "水", "木", "金", "土", "日"];
 
 const employees: Employee[] = [
@@ -136,11 +139,11 @@ function getShiftCellMeta(shiftCode: WorkerShiftCode) {
     vacation: "休暇",
   };
   const styles: Record<WorkerWorkShiftCode, string> = {
-    shift_1: "border-emerald-200 bg-emerald-50 text-emerald-800",
-    shift_2: "border-rose-200 bg-rose-50 text-rose-700",
+    shift_1: "border-sky-200 bg-sky-50 text-sky-800",
+    shift_2: "border-orange-200 bg-orange-50 text-orange-800",
     shift_3: "border-yellow-200 bg-yellow-50 text-yellow-800",
-    full_day: "border-teal-200 bg-teal-50 text-teal-800",
-    vacation: "border-stone-200 bg-stone-50 text-stone-600",
+    full_day: "border-emerald-200 bg-emerald-50 text-emerald-800",
+    vacation: "border-pink-100 bg-pink-50/70 text-pink-700",
   };
 
   return {
@@ -192,15 +195,54 @@ function ShiftsContent() {
   const { t } = useI18n();
   const [weekOffset, setWeekOffset] = useState(2);
   const [todayKey, setTodayKey] = useState<string | null>(null);
+  const [reportName, setReportName] = useState(selfEmployeeId);
+  const [reportDate, setReportDate] = useState(defaultReportDate);
+  const [reportStartTime, setReportStartTime] = useState("08:30");
+  const [reportEndTime, setReportEndTime] = useState("13:00");
+  const [reportBreakMinutes, setReportBreakMinutes] = useState<BreakMinutes>("30");
+  const [reportTransportation, setReportTransportation] = useState("");
+  const [reportMessage, setReportMessage] = useState("");
+  const [reportError, setReportError] = useState("");
+  const [reportSuccess, setReportSuccess] = useState("");
 
   const weekStart = addDays(baseWeekStart, weekOffset * 7);
   const weekDays = useMemo(() => getWeekDays(weekStart), [weekStart]);
   const assignments = useMemo(() => createAssignments(weekDays), [weekDays]);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => setTodayKey(getClientDateKey()), 0);
+    const timer = window.setTimeout(() => {
+      const clientDateKey = getClientDateKey();
+      setTodayKey(clientDateKey);
+      setReportDate(clientDateKey);
+    }, 0);
     return () => window.clearTimeout(timer);
   }, []);
+
+  function submitReport() {
+    setReportError("");
+    setReportSuccess("");
+
+    if (
+      !reportName ||
+      !reportDate ||
+      !reportStartTime ||
+      !reportEndTime ||
+      !reportBreakMinutes ||
+      reportTransportation.trim() === ""
+    ) {
+      setReportError(t("shifts.dailyReportRequiredError"));
+      return;
+    }
+
+    const transportationCost = Number(reportTransportation);
+    if (Number.isNaN(transportationCost) || transportationCost < 0) {
+      setReportError(t("shifts.dailyReportRequiredError"));
+      return;
+    }
+
+    setReportSuccess(t("shifts.dailyReportSuccessDemo"));
+    setReportMessage("");
+  }
 
   return (
     <div className="space-y-3 pb-4">
@@ -241,6 +283,130 @@ function ShiftsContent() {
               </div>
             );
           })}
+        </div>
+      </section>
+
+      <section className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+        <div>
+          <h2 className="text-sm font-bold text-slate-950">{t("shifts.dailyReportTitle")}</h2>
+          <p className="mt-0.5 text-xs text-slate-500">{t("shifts.dailyReportSubtitle")}</p>
+        </div>
+
+        <div className="mt-3 space-y-2">
+          <div className="grid grid-cols-2 gap-2">
+            <label className="block text-xs font-semibold text-slate-700">
+              {t("shifts.reportName")}
+              <select
+                value={reportName}
+                onChange={(event) => setReportName(event.target.value)}
+                className="mt-1 h-9 w-full rounded-lg border border-slate-200 bg-white px-2 text-sm text-slate-900"
+              >
+                {employees.map((employee) => (
+                  <option key={employee.id} value={employee.id}>
+                    {employee.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="block text-xs font-semibold text-slate-700">
+              {t("shifts.reportDate")}
+              <input
+                type="date"
+                value={reportDate}
+                onChange={(event) => setReportDate(event.target.value)}
+                className="mt-1 h-9 w-full rounded-lg border border-slate-200 px-2 text-sm text-slate-900"
+              />
+            </label>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <label className="block text-xs font-semibold text-slate-700">
+              {t("shifts.reportStartTime")}
+              <span className="ml-1 text-[10px] font-medium text-slate-400">{t("shifts.reportOneMinuteOk")}</span>
+              <input
+                type="time"
+                step="60"
+                value={reportStartTime}
+                onChange={(event) => setReportStartTime(event.target.value)}
+                className="mt-1 h-9 w-full rounded-lg border border-slate-200 px-2 text-sm text-slate-900"
+              />
+            </label>
+
+            <label className="block text-xs font-semibold text-slate-700">
+              {t("shifts.reportEndTime")}
+              <span className="ml-1 text-[10px] font-medium text-slate-400">{t("shifts.reportOneMinuteOk")}</span>
+              <input
+                type="time"
+                step="60"
+                value={reportEndTime}
+                onChange={(event) => setReportEndTime(event.target.value)}
+                className="mt-1 h-9 w-full rounded-lg border border-slate-200 px-2 text-sm text-slate-900"
+              />
+            </label>
+          </div>
+
+          <div className="grid grid-cols-[1fr_104px] gap-2">
+            <div>
+              <p className="text-xs font-semibold text-slate-700">{t("shifts.reportBreakTime")}</p>
+              <div className="mt-1 grid grid-cols-3 gap-1">
+                {(["0", "30", "60"] as BreakMinutes[]).map((minutes) => (
+                  <button
+                    key={minutes}
+                    type="button"
+                    onClick={() => setReportBreakMinutes(minutes)}
+                    className={`h-9 rounded-lg border text-xs font-bold ${
+                      reportBreakMinutes === minutes
+                        ? "border-emerald-600 bg-emerald-50 text-emerald-800"
+                        : "border-slate-200 bg-white text-slate-600"
+                    }`}
+                  >
+                    {minutes}
+                    {t("shifts.reportMinutes")}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <label className="block text-xs font-semibold text-slate-700">
+              {t("shifts.reportTransportation")}
+              <div className="mt-1 flex h-9 items-center rounded-lg border border-slate-200 bg-white px-2">
+                <input
+                  type="number"
+                  min="0"
+                  value={reportTransportation}
+                  onChange={(event) => setReportTransportation(event.target.value)}
+                  placeholder={t("shifts.reportTransportationPlaceholder")}
+                  className="min-w-0 flex-1 text-sm text-slate-900 outline-none"
+                />
+                <span className="text-xs font-semibold text-slate-500">円</span>
+              </div>
+            </label>
+          </div>
+
+          <label className="block text-xs font-semibold text-slate-700">
+            {t("shifts.reportMessage")}
+            <textarea
+              value={reportMessage}
+              onChange={(event) => setReportMessage(event.target.value)}
+              placeholder={t("shifts.reportMessagePlaceholder")}
+              rows={3}
+              className="mt-1 w-full rounded-lg border border-slate-200 px-2 py-2 text-sm text-slate-900"
+            />
+          </label>
+
+          {reportError ? <p className="rounded-lg bg-rose-50 px-2 py-1.5 text-xs font-semibold text-rose-700">{reportError}</p> : null}
+          {reportSuccess ? (
+            <p className="rounded-lg bg-emerald-50 px-2 py-1.5 text-xs font-semibold text-emerald-700">{reportSuccess}</p>
+          ) : null}
+
+          <button
+            type="button"
+            onClick={submitReport}
+            className="h-10 w-full rounded-lg bg-emerald-800 text-sm font-bold text-white shadow-sm"
+          >
+            {t("shifts.reportSubmit")}
+          </button>
         </div>
       </section>
 
@@ -323,10 +489,6 @@ function WeekTable({
                   <div
                     key={day.key}
                     className={`flex h-6 items-center justify-center border-r border-slate-100 px-0.5 ${
-                      day.key === todayKey
-                        ? "bg-emerald-50/70 ring-1 ring-inset ring-emerald-200"
-                        : ""
-                    } ${
                       day.weekdayIndex === 5 ? "bg-sky-50/50" : day.weekdayIndex === 6 ? "bg-rose-50/40" : ""
                     }`}
                   >
