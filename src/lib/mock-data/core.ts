@@ -18,7 +18,7 @@ export const shiftTypes = [
   {
     code: "shift_1",
     label: "1シフト",
-    shortLabel: "①",
+    shortLabel: "1",
     startTime: "08:30",
     endTime: "13:00",
     hours: 4.5,
@@ -27,10 +27,19 @@ export const shiftTypes = [
   {
     code: "shift_2",
     label: "2シフト",
-    shortLabel: "②",
+    shortLabel: "2",
     startTime: "13:00",
     endTime: "17:30",
     hours: 4.5,
+    isWorkingShift: true,
+  },
+  {
+    code: "shift_3",
+    label: "3シフト",
+    shortLabel: "3",
+    startTime: "08:30",
+    endTime: "10:00",
+    hours: 1.5,
     isWorkingShift: true,
   },
   {

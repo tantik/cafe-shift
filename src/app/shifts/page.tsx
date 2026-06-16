@@ -4,18 +4,12 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import AppShell from "@/components/app-shell";
 import { useI18n } from "@/lib/i18n/use-i18n";
-import { DEMO_START_DATE, employees as coreEmployees, shiftTypes as coreShiftTypes } from "@/lib/mock-data/core";
+import { DEMO_START_DATE, shiftTypes as coreShiftTypes } from "@/lib/mock-data/core";
 import type { ShiftCode } from "@/types/domain";
 
 type Employee = {
   id: string;
   name: string;
-  initials: string;
-};
-
-type Assignment = {
-  employeeId: string;
-  shift: WorkerShiftCode;
 };
 
 type CalendarDay = {
@@ -23,63 +17,51 @@ type CalendarDay = {
   month: number;
   day: number;
   weekday: string;
+  weekdayIndex: number;
 };
 
-type WeekGroup = {
-  label: string;
-  days: CalendarDay[];
+type WorkerShiftCode = Exclude<ShiftCode, "sick" | "off"> | "store_closed" | "no_shift" | "ng";
+
+type Assignment = {
+  employeeId: string;
+  shift: WorkerShiftCode;
 };
 
-type WorkerShiftCode = Exclude<ShiftCode, "sick">;
-
-const selfEmployeeId = "yamada";
-const basePeriodStart = DEMO_START_DATE;
+const selfEmployeeId = "ly";
+const baseWeekStart = DEMO_START_DATE;
 const weekdays = ["月", "火", "水", "木", "金", "土", "日"];
 
-const coreEmployeeById = Object.fromEntries(coreEmployees.map((employee) => [employee.id, employee]));
-
 const employees: Employee[] = [
-  { id: "yamada", name: coreEmployeeById.yamada?.name ?? "山田 花子", initials: coreEmployeeById.yamada?.avatarLabel ?? "YH" },
-  { id: "sato", name: coreEmployeeById.sato?.name ?? "佐藤 健", initials: coreEmployeeById.sato?.avatarLabel ?? "SK" },
-  { id: "suzuki", name: coreEmployeeById.suzuki?.name ?? "鈴木 愛", initials: coreEmployeeById.suzuki?.avatarLabel ?? "SA" },
-  { id: "ito", name: coreEmployeeById.ito?.name ?? "伊藤 翔", initials: coreEmployeeById.ito?.avatarLabel ?? "IS" },
-  { id: "takahashi", name: coreEmployeeById.takahashi?.name ?? "高橋 美咲", initials: coreEmployeeById.takahashi?.avatarLabel ?? "TM" },
-  { id: "tanaka", name: coreEmployeeById.tanaka?.name ?? "田中 優", initials: coreEmployeeById.tanaka?.avatarLabel ?? "TY" },
-  { id: "nakamura", name: "中村 蓮", initials: "NR" },
-  { id: "kobayashi", name: "小林 杏", initials: "KA" },
-  { id: "aoki", name: "青木 悠", initials: "AY" },
-  { id: "kato", name: "加藤 凛", initials: "KR" },
-  { id: "watanabe", name: "渡辺 陽", initials: "WY" },
-  { id: "yoshida", name: "吉田 葵", initials: "YA" },
-  { id: "yamamoto", name: "山本 海", initials: "YK" },
-  { id: "matsumoto", name: "松本 澪", initials: "MM" },
-  { id: "inoue", name: "井上 空", initials: "IS" },
-  { id: "hayashi", name: "林 結衣", initials: "HY" },
+  { id: "manabu", name: "まなぶ" },
+  { id: "ly", name: "LY" },
+  { id: "yuko", name: "ゆうこ" },
+  { id: "seira", name: "せいら" },
+  { id: "asako", name: "あさこ" },
+  { id: "my-ha", name: "My Ha" },
+  { id: "hyori", name: "Hyori" },
+  { id: "bui", name: "Bui" },
+  { id: "olha", name: "Olha" },
+  { id: "grace", name: "Grace" },
+  { id: "cons", name: "Cons" },
+  { id: "bao", name: "Bao" },
+  { id: "gyu", name: "GYU" },
+  { id: "estany", name: "Estany" },
+  { id: "maria", name: "Maria" },
 ];
-
-const shiftTypes = coreShiftTypes.map((shift) => ({
-  code: shift.code,
-  label: shift.label,
-  marker: shift.code === "shift_1" ? "1" : shift.code === "shift_2" ? "2" : shift.shortLabel,
-  time: shift.startTime && shift.endTime ? `${shift.startTime}〜${shift.endTime}` : "",
-  hours: shift.hours,
-})) satisfies { code: ShiftCode; label: string; marker: string; time: string; hours: number }[];
 
 const shiftPattern: WorkerShiftCode[] = [
   "shift_1",
   "shift_2",
-  "off",
-  "shift_1",
-  "shift_2",
+  "shift_3",
+  "no_shift",
   "full_day",
-  "off",
-  "shift_1",
   "vacation",
-  "shift_2",
-  "off",
   "shift_1",
-  "full_day",
-  "off",
+  "no_shift",
+  "shift_2",
+  "shift_3",
+  "ng",
+  "no_shift",
 ];
 
 function parseDateKey(dateKey: string) {
@@ -99,78 +81,87 @@ function addDays(dateKey: string, amount: number) {
 
 function createCalendarDay(dateKey: string): CalendarDay {
   const date = parseDateKey(dateKey);
-  const weekday = weekdays[(date.getUTCDay() + 6) % 7];
+  const weekdayIndex = (date.getUTCDay() + 6) % 7;
   return {
     key: dateKey,
     month: date.getUTCMonth() + 1,
     day: date.getUTCDate(),
-    weekday,
+    weekday: weekdays[weekdayIndex],
+    weekdayIndex,
   };
 }
 
-function getTwoWeekPeriod(startDate: string) {
-  return Array.from({ length: 14 }, (_, index) => createCalendarDay(addDays(startDate, index)));
-}
-
-function groupDaysIntoWeeks(days: CalendarDay[]): WeekGroup[] {
-  return [
-    { label: "W1", days: days.slice(0, 7) },
-    { label: "W2", days: days.slice(7, 14) },
-  ];
+function getWeekDays(startDate: string) {
+  return Array.from({ length: 7 }, (_, index) => createCalendarDay(addDays(startDate, index)));
 }
 
 function createAssignments(days: CalendarDay[]) {
   return days.reduce<Record<string, Assignment[]>>((calendar, day, dayIndex) => {
-    const workingLimit = dayIndex % 7 === 5 ? 8 : dayIndex % 7 === 6 ? 4 : 6;
-    let workingCount = 0;
-
     calendar[day.key] = employees.map((employee, employeeIndex) => {
-      let shift = shiftPattern[(dayIndex + employeeIndex * 3) % shiftPattern.length];
-
-      if (employee.id === selfEmployeeId && dayIndex % 9 === 2) {
-        shift = "full_day";
-      }
-
-      const isWorkingShift = shift === "shift_1" || shift === "shift_2" || shift === "full_day";
-      if (isWorkingShift) {
-        workingCount += shift === "full_day" ? 2 : 1;
-      }
-      if (workingCount > workingLimit && employee.id !== selfEmployeeId) {
-        shift = employeeIndex % 4 === 0 ? "vacation" : "off";
-      }
-
+      const isStoreClosed = day.weekdayIndex === 6 && employeeIndex % 5 === 0;
+      const shift = isStoreClosed ? "store_closed" : shiftPattern[(employeeIndex + dayIndex * 2) % shiftPattern.length];
       return { employeeId: employee.id, shift };
     });
-
     return calendar;
   }, {});
 }
 
-function getShiftType(code: ShiftCode) {
-  return shiftTypes.find((shift) => shift.code === code) ?? shiftTypes[0];
+function getEmployeeShiftForDate(assignments: Record<string, Assignment[]>, employeeId: string, date: string) {
+  return assignments[date]?.find((assignment) => assignment.employeeId === employeeId)?.shift ?? "no_shift";
 }
 
-function getEmployeeShiftForDate(assignments: Record<string, Assignment[]>, employeeId: string, date: string) {
-  return assignments[date]?.find((assignment) => assignment.employeeId === employeeId) ?? null;
+function getCoreShift(code: ShiftCode) {
+  return coreShiftTypes.find((shift) => shift.code === code);
 }
 
 function getShiftCellMeta(shiftCode: WorkerShiftCode) {
-  const shift = getShiftType(shiftCode);
-  const styles: Record<WorkerShiftCode, string> = {
-    shift_1: "border-emerald-200 bg-emerald-50 text-emerald-800",
-    shift_2: "border-amber-200 bg-amber-50 text-amber-800",
-    full_day: "border-sky-200 bg-sky-50 text-sky-800",
-    off: "border-slate-200 bg-slate-50 text-slate-500",
-    vacation: "border-rose-100 bg-rose-50/70 text-rose-700",
+  if (shiftCode === "store_closed") {
+    return { marker: "休", label: "休み", time: "", hours: 0, isWorkday: false, className: "border-slate-200 bg-slate-100 text-slate-600" };
+  }
+  if (shiftCode === "no_shift") {
+    return { marker: "-", label: "-", time: "", hours: 0, isWorkday: false, className: "border-slate-100 bg-white text-slate-400" };
+  }
+  if (shiftCode === "ng") {
+    return { marker: "NG", label: "NG", time: "", hours: 0, isWorkday: false, className: "border-slate-200 bg-white text-slate-900" };
+  }
+
+  const shift = getCoreShift(shiftCode);
+  const markerByCode: Record<Exclude<ShiftCode, "sick" | "off">, string> = {
+    shift_1: "1",
+    shift_2: "2",
+    shift_3: "3",
+    full_day: "通",
+    vacation: "休暇",
   };
-  return { ...shift, className: styles[shiftCode] };
+  const styles: Record<Exclude<ShiftCode, "sick" | "off">, string> = {
+    shift_1: "border-emerald-200 bg-emerald-50 text-emerald-800",
+    shift_2: "border-rose-200 bg-rose-50 text-rose-700",
+    shift_3: "border-yellow-200 bg-yellow-50 text-yellow-800",
+    full_day: "border-teal-200 bg-teal-50 text-teal-800",
+    vacation: "border-stone-200 bg-stone-50 text-stone-600",
+  };
+
+  return {
+    marker: markerByCode[shiftCode],
+    label: shift?.label ?? markerByCode[shiftCode],
+    time: shift?.startTime && shift.endTime ? `${shift.startTime}〜${shift.endTime}` : "",
+    hours: shift?.hours ?? 0,
+    isWorkday: Boolean(shift?.isWorkingShift),
+    className: styles[shiftCode],
+  };
 }
 
 function calculateWeeklyTotal(assignments: Record<string, Assignment[]>, employeeId: string, weekDays: CalendarDay[]) {
-  return weekDays.reduce((total, day) => {
-    const assignment = getEmployeeShiftForDate(assignments, employeeId, day.key);
-    return total + (assignment ? getShiftType(assignment.shift).hours : 0);
-  }, 0);
+  return weekDays.reduce(
+    (total, day) => {
+      const meta = getShiftCellMeta(getEmployeeShiftForDate(assignments, employeeId, day.key));
+      return {
+        days: total.days + (meta.isWorkday ? 1 : 0),
+        hours: total.hours + meta.hours,
+      };
+    },
+    { days: 0, hours: 0 },
+  );
 }
 
 function formatHours(hours: number) {
@@ -187,10 +178,6 @@ function formatWeekRange(days: CalendarDay[]) {
   return `${formatDayLabel(firstDay)}(${firstDay.weekday})〜${formatDayLabel(lastDay)}(${lastDay.weekday})`;
 }
 
-function countWorkingPeople(assignments: Record<string, Assignment[]>, day: CalendarDay, shiftCodes: WorkerShiftCode[]) {
-  return (assignments[day.key] ?? []).filter((assignment) => shiftCodes.includes(assignment.shift)).length;
-}
-
 function formatPeriod(days: CalendarDay[]) {
   return `${formatDayLabel(days[0])}〜${formatDayLabel(days[days.length - 1])}`;
 }
@@ -205,56 +192,48 @@ export default function ShiftsPage() {
 
 function ShiftsContent() {
   const { t } = useI18n();
-  const [periodOffset, setPeriodOffset] = useState(0);
+  const [weekOffset, setWeekOffset] = useState(2);
 
-  const periodStart = addDays(basePeriodStart, periodOffset * 14);
-  const periodDays = useMemo(() => getTwoWeekPeriod(periodStart), [periodStart]);
-  const weekGroups = useMemo(() => groupDaysIntoWeeks(periodDays), [periodDays]);
-  const assignments = useMemo(() => createAssignments(periodDays), [periodDays]);
+  const weekStart = addDays(baseWeekStart, weekOffset * 7);
+  const weekDays = useMemo(() => getWeekDays(weekStart), [weekStart]);
+  const assignments = useMemo(() => createAssignments(weekDays), [weekDays]);
 
   return (
     <div className="space-y-3 pb-4">
       <div className="space-y-2">
-        <p className="text-sm font-bold tracking-[0.14em] text-emerald-800">{t("shifts.twoWeekSchedule")}</p>
+        <p className="text-sm font-bold tracking-[0.14em] text-emerald-800">{t("shifts.weeklyShift")}</p>
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-1.5">
           <button
             type="button"
-            onClick={() => setPeriodOffset((current) => current - 1)}
+            onClick={() => setWeekOffset((current) => current - 1)}
             className="rounded-lg border border-slate-200 bg-white px-2 py-2 text-[11px] font-semibold text-slate-700 shadow-sm"
           >
-            {t("shifts.previousTwoWeeks")}
+            {t("shifts.previousWeek")}
           </button>
-          <span className="min-w-[86px] text-center text-sm font-bold text-slate-950">{formatPeriod(periodDays)}</span>
+          <span className="min-w-[86px] text-center text-sm font-bold text-slate-950">{formatPeriod(weekDays)}</span>
           <button
             type="button"
-            onClick={() => setPeriodOffset((current) => current + 1)}
+            onClick={() => setWeekOffset((current) => current + 1)}
             className="rounded-lg border border-slate-200 bg-white px-2 py-2 text-[11px] font-semibold text-slate-700 shadow-sm"
           >
-            {t("shifts.nextTwoWeeks")}
+            {t("shifts.nextWeek")}
           </button>
         </div>
       </div>
 
-      <section className="space-y-4">
-        {weekGroups.map((week) => (
-          <WeekTable key={week.label} week={week} assignments={assignments} t={t} />
-        ))}
-      </section>
+      <WeekTable weekNumber={weekOffset + 1} weekDays={weekDays} assignments={assignments} t={t} />
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-        <h2 className="text-sm font-bold text-slate-900">{t("shifts.legend")}</h2>
-        <div className="mt-2 grid grid-cols-1 gap-1.5 text-[11px] min-[380px]:grid-cols-2">
-          {(["shift_1", "shift_2", "full_day", "off", "vacation"] as WorkerShiftCode[]).map((code) => {
+      <section className="rounded-xl border border-slate-200 bg-white p-2.5 shadow-sm">
+        <h2 className="text-xs font-bold text-slate-900">{t("shifts.legend")}</h2>
+        <div className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-[11px]">
+          {(["shift_1", "shift_2", "shift_3", "full_day", "store_closed", "vacation"] as WorkerShiftCode[]).map((code) => {
             const meta = getShiftCellMeta(code);
             return (
-              <div key={code} className="flex items-center gap-2">
-                <span className={`inline-flex min-w-9 justify-center rounded-md border px-1.5 py-0.5 font-bold ${meta.className}`}>
+              <div key={code} className="flex min-w-0 items-center gap-1.5">
+                <span className={`inline-flex min-w-8 justify-center rounded border px-1 py-0.5 font-bold leading-none ${meta.className}`}>
                   {meta.marker}
                 </span>
-                <span className="text-slate-600">
-                  {meta.label}
-                  {meta.time ? ` / ${meta.time}` : ""}
-                </span>
+                <span className="truncate text-slate-600">{meta.time || meta.label}</span>
               </div>
             );
           })}
@@ -274,101 +253,89 @@ function ShiftsContent() {
 }
 
 function WeekTable({
-  week,
+  weekNumber,
+  weekDays,
   assignments,
   t,
 }: {
-  week: WeekGroup;
+  weekNumber: number;
+  weekDays: CalendarDay[];
   assignments: Record<string, Assignment[]>;
   t: (key: string) => string;
 }) {
   return (
     <article className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-      <div className="border-b border-slate-200 bg-slate-50 px-2 py-2">
-        <div className="flex items-center justify-between gap-2">
-          <h2 className="text-sm font-bold text-slate-950">
-            {week.label} <span className="text-xs font-semibold text-slate-600">{formatWeekRange(week.days)}</span>
-          </h2>
-          <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-600">
-            {employees.length}
-            {t("shifts.peopleCountSuffix")}
-          </span>
-        </div>
+      <div className="border-b border-slate-200 bg-slate-50 px-2 py-1.5">
+        <h2 className="text-sm font-bold text-slate-950">
+          W{weekNumber} <span className="text-xs font-semibold text-slate-600">{formatWeekRange(weekDays)}</span>
+        </h2>
       </div>
 
-      <div>
-        <div className="w-full">
-          <div className="grid grid-cols-[58px_repeat(7,minmax(0,1fr))_34px] border-b border-slate-200 bg-white text-center text-[9px] font-semibold text-slate-500 min-[380px]:grid-cols-[66px_repeat(7,minmax(0,1fr))_40px]">
-            <div className="border-r border-slate-200 bg-white px-1 py-1.5 text-left">{t("shifts.employee")}</div>
-            {week.days.map((day) => (
-              <div key={day.key} className="border-r border-slate-100 px-0.5 py-1.5">
-                <span className="block font-bold leading-none text-slate-900">{day.day}</span>
-                <span className="mt-0.5 block leading-none">{day.weekday}</span>
-              </div>
-            ))}
-            <div className="px-0.5 py-1.5 leading-tight">{t("shifts.weeklyTotal")}</div>
-          </div>
+      <div className="w-full">
+        <div className="grid grid-cols-[54px_repeat(7,minmax(0,1fr))_42px] border-b border-slate-200 bg-white text-center text-[9px] font-semibold text-slate-500 min-[380px]:grid-cols-[62px_repeat(7,minmax(0,1fr))_48px]">
+          <div className="border-r border-slate-200 px-1 py-1 text-left">{t("shifts.employee")}</div>
+          {weekDays.map((day) => (
+            <div
+              key={day.key}
+              className={`border-r border-slate-100 px-0.5 py-1 ${
+                day.weekdayIndex === 5 ? "bg-sky-50/70" : day.weekdayIndex === 6 ? "bg-rose-50/60" : ""
+              }`}
+            >
+              <span className="block font-bold leading-none text-slate-900">{day.day}</span>
+              <span className="mt-0.5 block leading-none">{day.weekday}</span>
+            </div>
+          ))}
+          <div className="px-0.5 py-1 leading-tight">{t("shifts.weeklyTotal")}</div>
+        </div>
 
-          {employees.map((employee) => {
-            const isSelf = employee.id === selfEmployeeId;
-            const weeklyTotal = calculateWeeklyTotal(assignments, employee.id, week.days);
-            return (
+        {employees.map((employee) => {
+          const isSelf = employee.id === selfEmployeeId;
+          const weeklyTotal = calculateWeeklyTotal(assignments, employee.id, weekDays);
+          return (
+            <div
+              key={employee.id}
+              className={`grid grid-cols-[54px_repeat(7,minmax(0,1fr))_42px] border-b border-slate-100 text-center text-[10px] last:border-b-0 min-[380px]:grid-cols-[62px_repeat(7,minmax(0,1fr))_48px] ${
+                isSelf ? "bg-emerald-50/60" : "bg-white"
+              }`}
+            >
               <div
-                key={employee.id}
-                className={`grid grid-cols-[58px_repeat(7,minmax(0,1fr))_34px] border-b border-slate-100 text-center text-[10px] last:border-b-0 min-[380px]:grid-cols-[66px_repeat(7,minmax(0,1fr))_40px] ${
-                  isSelf ? "bg-emerald-50/55" : "bg-white"
+                className={`flex h-7 min-w-0 items-center border-r border-slate-200 px-1 text-left ${
+                  isSelf ? "border-l-4 border-l-emerald-600 bg-emerald-50" : "bg-white"
                 }`}
               >
-                <div
-                  className={`flex h-8 min-w-0 items-center border-r border-slate-200 px-1 text-left ${
-                    isSelf ? "border-l-4 border-l-emerald-600 bg-emerald-50" : "bg-white"
-                  }`}
-                >
-                  <div className="min-w-0 leading-none">
-                    <div className="flex min-w-0 items-center gap-0.5">
-                      <span className="truncate text-[10px] font-bold text-slate-900">{employee.name}</span>
-                      {isSelf ? (
-                        <span className="shrink-0 rounded-full bg-emerald-700 px-1 py-0.5 text-[8px] font-bold text-white">{t("shifts.you")}</span>
-                      ) : null}
-                    </div>
+                <span className="min-w-0 truncate text-[10px] font-bold leading-none text-slate-900">{employee.name}</span>
+                {isSelf ? <span className="ml-0.5 shrink-0 rounded-full bg-emerald-700 px-1 py-0.5 text-[8px] font-bold text-white">{t("shifts.you")}</span> : null}
+              </div>
+
+              {weekDays.map((day) => {
+                const meta = getShiftCellMeta(getEmployeeShiftForDate(assignments, employee.id, day.key));
+                return (
+                  <div
+                    key={day.key}
+                    className={`flex h-7 items-center justify-center border-r border-slate-100 px-0.5 ${
+                      day.weekdayIndex === 5 ? "bg-sky-50/50" : day.weekdayIndex === 6 ? "bg-rose-50/40" : ""
+                    }`}
+                  >
+                    <span className={`flex h-[22px] w-full items-center justify-center border text-[10px] font-bold leading-none ${meta.className}`}>
+                      {meta.marker}
+                    </span>
                   </div>
-                </div>
+                );
+              })}
 
-                {week.days.map((day) => {
-                  const assignment = getEmployeeShiftForDate(assignments, employee.id, day.key);
-                  if (!assignment) {
-                    return <div key={day.key} className="flex h-8 items-center justify-center border-r border-slate-100 bg-white" />;
-                  }
-                  const meta = getShiftCellMeta(assignment.shift);
-                  return (
-                    <div key={day.key} className="flex h-8 items-center justify-center border-r border-slate-100 px-0.5 py-0.5">
-                      <span className={`inline-flex h-6 w-full items-center justify-center rounded border px-0.5 font-bold leading-none ${meta.className}`}>
-                        {meta.marker}
-                      </span>
-                    </div>
-                  );
-                })}
-
-                <div className="flex h-8 items-center justify-center px-0.5 text-[9px] font-bold text-slate-900">{formatHours(weeklyTotal)}</div>
+              <div className="flex h-7 flex-col items-center justify-center px-0.5 text-[8px] font-bold leading-tight text-slate-900">
+                {weeklyTotal.days === 0 ? (
+                  "-"
+                ) : (
+                  <>
+                    <span>{weeklyTotal.days}日</span>
+                    <span>{formatHours(weeklyTotal.hours)}</span>
+                  </>
+                )}
               </div>
-            );
-          })}
-
-          <div className="grid grid-cols-[58px_repeat(7,minmax(0,1fr))_34px] bg-slate-50 text-center text-[8px] font-semibold text-slate-600 min-[380px]:grid-cols-[66px_repeat(7,minmax(0,1fr))_40px]">
-            <div className="border-r border-slate-200 bg-slate-50 px-1 py-1.5 text-left">{t("shifts.staffing")}</div>
-            {week.days.map((day) => (
-              <div key={day.key} className="space-y-0.5 border-r border-slate-100 px-0.5 py-1">
-                <span className="block text-emerald-700">
-                  A{countWorkingPeople(assignments, day, ["shift_1", "full_day"])}
-                </span>
-                <span className="block text-amber-700">
-                  P{countWorkingPeople(assignments, day, ["shift_2", "full_day"])}
-                </span>
-              </div>
-            ))}
-            <div className="px-0.5 py-1 text-slate-400">-</div>
-          </div>
-        </div>
+            </div>
+          );
+        })}
       </div>
     </article>
   );

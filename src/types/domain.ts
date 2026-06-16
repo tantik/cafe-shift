@@ -3,6 +3,7 @@ export type Role = "manager" | "worker";
 export type ShiftCode =
   | "shift_1"
   | "shift_2"
+  | "shift_3"
   | "full_day"
   | "off"
   | "vacation"
