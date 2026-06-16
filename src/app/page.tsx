@@ -8,7 +8,6 @@ const cards = [
   { titleKey: "home.workerCardTitle", href: "/shifts" },
   { title: "シフト希望", href: "/requests" },
   { title: "勤務報告（シフト画面）", href: "/shifts" },
-  { title: "提案・改善", href: "/suggestions" },
   { title: "レシピ確認", href: "/recipes" },
   { titleKey: "home.managerCardTitle", href: "/manager" },
 ];
