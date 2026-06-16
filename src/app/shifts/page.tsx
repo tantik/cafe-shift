@@ -7,9 +7,6 @@ import { useI18n } from "@/lib/i18n/use-i18n";
 import { DEMO_START_DATE, employees as coreEmployees, shiftTypes as coreShiftTypes } from "@/lib/mock-data/core";
 import type { ShiftCode } from "@/types/domain";
 
-type ViewMode = "self" | "all";
-type BreakMinutes = 0 | 30 | 60;
-
 type Employee = {
   id: string;
   name: string;
@@ -28,21 +25,14 @@ type CalendarDay = {
   weekday: string;
 };
 
-type WorkReport = {
-  id: string;
-  date: string;
-  startTime: string;
-  endTime: string;
-  breakMinutes: BreakMinutes;
-  transportCost: number;
-  memo: string;
-  hasOvertime: boolean;
-  overtimeReason: string;
+type WeekGroup = {
+  label: string;
+  days: CalendarDay[];
 };
 
 const selfEmployeeId = "yamada";
-const mockToday = DEMO_START_DATE;
-const initialSelectedDate = DEMO_START_DATE;
+const basePeriodStart = DEMO_START_DATE;
+const weekdays = ["月", "火", "水", "木", "金", "土", "日"];
 
 const coreEmployeeById = Object.fromEntries(coreEmployees.map((employee) => [employee.id, employee]));
 
@@ -55,114 +45,156 @@ const employees: Employee[] = [
   { id: "tanaka", name: coreEmployeeById.tanaka?.name ?? "田中 優", initials: coreEmployeeById.tanaka?.avatarLabel ?? "TY" },
   { id: "nakamura", name: "中村 蓮", initials: "NR" },
   { id: "kobayashi", name: "小林 杏", initials: "KA" },
+  { id: "aoki", name: "青木 悠", initials: "AY" },
+  { id: "kato", name: "加藤 凛", initials: "KR" },
+  { id: "watanabe", name: "渡辺 陽", initials: "WY" },
+  { id: "yoshida", name: "吉田 葵", initials: "YA" },
+  { id: "yamamoto", name: "山本 海", initials: "YK" },
+  { id: "matsumoto", name: "松本 澪", initials: "MM" },
+  { id: "inoue", name: "井上 空", initials: "IS" },
+  { id: "hayashi", name: "林 結衣", initials: "HY" },
 ];
 
 const shiftTypes = coreShiftTypes.map((shift) => ({
   code: shift.code,
   label: shift.label,
   marker: shift.shortLabel,
-  time: shift.startTime && shift.endTime ? `${shift.startTime}–${shift.endTime}` : "",
-})) satisfies { code: ShiftCode; label: string; marker: string; time: string }[];
+  time: shift.startTime && shift.endTime ? `${shift.startTime}-${shift.endTime}` : "",
+  hours: shift.hours,
+})) satisfies { code: ShiftCode; label: string; marker: string; time: string; hours: number }[];
 
-const breakOptions: { labelKey: string; value: BreakMinutes }[] = [
-  { labelKey: "shifts.report.breakNone", value: 0 },
-  { labelKey: "shifts.report.break30", value: 30 },
-  { labelKey: "shifts.report.break60", value: 60 },
+const shiftPattern: ShiftCode[] = [
+  "shift_1",
+  "shift_2",
+  "off",
+  "shift_1",
+  "shift_2",
+  "full_day",
+  "off",
+  "shift_1",
+  "vacation",
+  "shift_2",
+  "off",
+  "shift_1",
+  "full_day",
+  "off",
 ];
 
-const initialReports: WorkReport[] = [
-  {
-    id: "work-report-001",
-    date: DEMO_START_DATE,
-    startTime: "08:30",
-    endTime: "13:00",
-    breakMinutes: 30,
-    transportCost: 420,
-    memo: "開店準備を対応しました",
-    hasOvertime: false,
-    overtimeReason: "",
-  },
-];
+function parseDateKey(dateKey: string) {
+  const [year, month, day] = dateKey.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day));
+}
 
-const weekdays = ["月", "火", "水", "木", "金", "土", "日"];
+function formatDateKey(date: Date) {
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`;
+}
 
-const days: CalendarDay[] = Array.from({ length: 56 }, (_, index) => {
-  const isJune = index < 30;
-  const month = isJune ? 6 : 7;
-  const day = isJune ? index + 1 : index - 29;
+function addDays(dateKey: string, amount: number) {
+  const date = parseDateKey(dateKey);
+  date.setUTCDate(date.getUTCDate() + amount);
+  return formatDateKey(date);
+}
+
+function createCalendarDay(dateKey: string): CalendarDay {
+  const date = parseDateKey(dateKey);
+  const weekday = weekdays[(date.getUTCDay() + 6) % 7];
   return {
-    key: `2026-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`,
-    month,
-    day,
-    weekday: weekdays[index % weekdays.length],
+    key: dateKey,
+    month: date.getUTCMonth() + 1,
+    day: date.getUTCDate(),
+    weekday,
   };
-});
+}
 
-const shiftPattern: ShiftCode[] = ["shift_1", "shift_2", "full_day", "off", "shift_1", "shift_2", "vacation"];
+function getTwoWeekPeriod(startDate: string) {
+  return Array.from({ length: 14 }, (_, index) => createCalendarDay(addDays(startDate, index)));
+}
 
-function createAssignments() {
+function groupDaysIntoWeeks(days: CalendarDay[]): WeekGroup[] {
+  return [
+    { label: "W1", days: days.slice(0, 7) },
+    { label: "W2", days: days.slice(7, 14) },
+  ];
+}
+
+function createAssignments(days: CalendarDay[]) {
   return days.reduce<Record<string, Assignment[]>>((calendar, day, dayIndex) => {
-    calendar[day.key] = employees.flatMap((employee, employeeIndex) => {
-      if (employee.id === selfEmployeeId && dayIndex % 13 === 11) {
-        return [];
-      }
+    const workingLimit = dayIndex % 7 === 5 ? 8 : dayIndex % 7 === 6 ? 4 : 6;
+    let workingCount = 0;
 
-      let shift = shiftPattern[(dayIndex + employeeIndex * 2) % shiftPattern.length];
-      if ((dayIndex === 9 && employee.id === "ito") || (dayIndex === 18 && employee.id === selfEmployeeId)) {
+    calendar[day.key] = employees.map((employee, employeeIndex) => {
+      let shift = shiftPattern[(dayIndex + employeeIndex * 3) % shiftPattern.length];
+
+      if (employee.id === selfEmployeeId && dayIndex % 9 === 2) {
+        shift = "full_day";
+      }
+      if ((employee.id === "ito" && dayIndex === 4) || (employee.id === "kato" && dayIndex === 10)) {
         shift = "sick";
       }
-      return [{ employeeId: employee.id, shift }];
+
+      const isWorkingShift = shift === "shift_1" || shift === "shift_2" || shift === "full_day";
+      if (isWorkingShift) {
+        workingCount += shift === "full_day" ? 2 : 1;
+      }
+      if (workingCount > workingLimit && employee.id !== selfEmployeeId) {
+        shift = employeeIndex % 4 === 0 ? "vacation" : "off";
+      }
+
+      return { employeeId: employee.id, shift };
     });
+
     return calendar;
   }, {});
 }
-
-const assignments = createAssignments();
 
 function getShiftType(code: ShiftCode) {
   return shiftTypes.find((shift) => shift.code === code) ?? shiftTypes[0];
 }
 
-function formatDate(day: CalendarDay) {
-  return `2026年${day.month}月${day.day}日（${day.weekday}）`;
+function getEmployeeShiftForDate(assignments: Record<string, Assignment[]>, employeeId: string, date: string) {
+  return assignments[date]?.find((assignment) => assignment.employeeId === employeeId) ?? null;
 }
 
-function timeToMinutes(value: string) {
-  const [hour, minute] = value.split(":").map(Number);
-  if (Number.isNaN(hour) || Number.isNaN(minute)) {
-    return null;
-  }
-  return hour * 60 + minute;
+function getShiftCellMeta(shiftCode: ShiftCode) {
+  const shift = getShiftType(shiftCode);
+  const styles: Record<ShiftCode, string> = {
+    shift_1: "border-emerald-200 bg-emerald-50 text-emerald-800",
+    shift_2: "border-amber-200 bg-amber-50 text-amber-800",
+    full_day: "border-sky-200 bg-sky-50 text-sky-800",
+    off: "border-slate-200 bg-slate-50 text-slate-500",
+    vacation: "border-pink-200 bg-pink-50 text-pink-700",
+    sick: "border-rose-200 bg-rose-50 text-rose-700",
+  };
+  return { ...shift, className: styles[shiftCode] };
 }
 
-function formatHours(minutes: number | null, notEnteredLabel: string) {
-  if (minutes === null || minutes < 0) {
-    return notEnteredLabel;
-  }
-  const hours = minutes / 60;
+function calculateWeeklyTotal(assignments: Record<string, Assignment[]>, employeeId: string, weekDays: CalendarDay[]) {
+  return weekDays.reduce((total, day) => {
+    const assignment = getEmployeeShiftForDate(assignments, employeeId, day.key);
+    return total + (assignment ? getShiftType(assignment.shift).hours : 0);
+  }, 0);
+}
+
+function formatHours(hours: number) {
   return `${Number.isInteger(hours) ? hours : hours.toFixed(1)}h`;
 }
 
-function formatBreak(minutes: BreakMinutes, t: (key: string) => string) {
-  if (minutes === 0) {
-    return t("shifts.report.breakNone");
-  }
-  if (minutes === 30) {
-    return t("shifts.report.break30");
-  }
-  return t("shifts.report.break60");
+function formatDayLabel(day: CalendarDay) {
+  return `${day.month}/${day.day}`;
 }
 
-function formatGroupSummary(dailyAssignments: Assignment[], shift: ShiftCode) {
-  const initials = dailyAssignments
-    .filter((assignment) => assignment.shift === shift)
-    .map((assignment) => employees.find((employee) => employee.id === assignment.employeeId)?.initials)
-    .filter((initial): initial is string => Boolean(initial));
+function formatWeekRange(days: CalendarDay[]) {
+  const firstDay = days[0];
+  const lastDay = days[days.length - 1];
+  return `${formatDayLabel(firstDay)}(${firstDay.weekday})-${formatDayLabel(lastDay)}(${lastDay.weekday})`;
+}
 
-  if (initials.length === 0) {
-    return "—";
-  }
-  return `${initials[0]}${initials.length > 1 ? ` +${initials.length - 1}` : ""}`;
+function countWorkingPeople(assignments: Record<string, Assignment[]>, day: CalendarDay, shiftCodes: ShiftCode[]) {
+  return (assignments[day.key] ?? []).filter((assignment) => shiftCodes.includes(assignment.shift)).length;
+}
+
+function formatPeriod(days: CalendarDay[]) {
+  return `${formatDayLabel(days[0])}-${formatDayLabel(days[days.length - 1])}`;
 }
 
 export default function ShiftsPage() {
@@ -175,455 +207,232 @@ export default function ShiftsPage() {
 
 function ShiftsContent() {
   const { t } = useI18n();
-  const [viewMode, setViewMode] = useState<ViewMode>("self");
-  const [selectedDate, setSelectedDate] = useState(initialSelectedDate);
-  const [startTime, setStartTime] = useState("08:30");
-  const [endTime, setEndTime] = useState("13:00");
-  const [breakMinutes, setBreakMinutes] = useState<BreakMinutes>(30);
-  const [transportCost, setTransportCost] = useState("420");
-  const [memo, setMemo] = useState("");
-  const [hasOvertime, setHasOvertime] = useState(false);
-  const [overtimeReason, setOvertimeReason] = useState("");
-  const [reports, setReports] = useState(initialReports);
-  const [nextReportNumber, setNextReportNumber] = useState(2);
-  const [reportError, setReportError] = useState("");
-  const [reportSuccess, setReportSuccess] = useState("");
+  const [periodOffset, setPeriodOffset] = useState(0);
 
-  const selectedDay = days.find((day) => day.key === selectedDate) ?? days[0];
-  const selectedAssignments = assignments[selectedDay.key] ?? [];
-  const selectedSelfAssignment = selectedAssignments.find((assignment) => assignment.employeeId === selfEmployeeId);
-  const selectedSelfShift = selectedSelfAssignment ? getShiftType(selectedSelfAssignment.shift) : null;
-  const workPreview = useMemo(() => {
-    const start = timeToMinutes(startTime);
-    const end = timeToMinutes(endTime);
-    const totalMinutes = start !== null && end !== null && end > start ? end - start : null;
-    const actualMinutes = totalMinutes !== null ? totalMinutes - breakMinutes : null;
-    return { totalMinutes, actualMinutes };
-  }, [breakMinutes, endTime, startTime]);
+  const periodStart = addDays(basePeriodStart, periodOffset * 14);
+  const periodDays = useMemo(() => getTwoWeekPeriod(periodStart), [periodStart]);
+  const weekGroups = useMemo(() => groupDaysIntoWeeks(periodDays), [periodDays]);
+  const assignments = useMemo(() => createAssignments(periodDays), [periodDays]);
 
-  function formatReportDate(date: string) {
-    const day = days.find((item) => item.key === date);
-    return day ? formatDate(day) : date;
-  }
-
-  function saveWorkReport() {
-    setReportError("");
-    setReportSuccess("");
-
-    const start = timeToMinutes(startTime);
-    const end = timeToMinutes(endTime);
-    const cost = transportCost.trim() === "" ? 0 : Number(transportCost);
-
-    if (!startTime || !endTime) {
-      setReportError(!startTime ? t("shifts.report.validationStartRequired") : t("shifts.report.validationEndRequired"));
-      return;
-    }
-    if (start === null || end === null || end <= start) {
-      setReportError(t("shifts.report.validationEndAfterStart"));
-      return;
-    }
-    if (Number.isNaN(cost) || cost < 0) {
-      setReportError(t("shifts.report.validationTransportNonNegative"));
-      return;
-    }
-    if (hasOvertime && !overtimeReason.trim()) {
-      setReportError(t("shifts.report.validationReasonRequired"));
-      return;
-    }
-
-    const nextReport: WorkReport = {
-      id: `work-report-${String(nextReportNumber).padStart(3, "0")}`,
-      date: selectedDay.key,
-      startTime,
-      endTime,
-      breakMinutes,
-      transportCost: cost,
-      memo,
-      hasOvertime,
-      overtimeReason: hasOvertime ? overtimeReason.trim() : "",
-    };
-
-    setReports((current) => [nextReport, ...current]);
-    setNextReportNumber((current) => current + 1);
-    setReportSuccess(t("shifts.report.success"));
-    setMemo("");
-    setOvertimeReason("");
-  }
+  const workingAssignments = periodDays.flatMap((day) =>
+    (assignments[day.key] ?? []).filter((assignment) => ["shift_1", "shift_2", "full_day"].includes(assignment.shift)),
+  );
+  const pendingRequests = employees.filter((_, index) => (index + periodOffset) % 5 === 0).length;
+  const nextSelfShift = periodDays
+    .map((day) => ({ day, assignment: getEmployeeShiftForDate(assignments, selfEmployeeId, day.key) }))
+    .find(({ assignment }) => assignment && ["shift_1", "shift_2", "full_day"].includes(assignment.shift));
 
   return (
     <div className="space-y-4 pb-4">
-        <header className="rounded-2xl border border-emerald-100 bg-gradient-to-r from-emerald-50 to-amber-50 p-4 shadow-sm">
-          <div className="flex flex-col gap-3">
+      <header className="rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm">
+        <div className="flex flex-col gap-3">
+          <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-xs font-semibold tracking-[0.16em] text-emerald-700">{t("shifts.twoWeekSchedule")}</p>
-              <h1 className="mt-1 text-2xl font-bold text-slate-900">{t("shifts.title")}</h1>
+              <h1 className="mt-1 text-2xl font-bold text-slate-950">{t("shifts.title")}</h1>
               <p className="mt-1 text-sm text-slate-600">{t("shifts.subtitle")}</p>
             </div>
-            <span className="inline-flex self-start items-center gap-2 rounded-full bg-white px-3 py-2 text-sm font-semibold text-slate-900 shadow-sm">
-              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-900 text-[11px] font-bold text-white">YH</span>
-              山田 花子
-            </span>
+            <Link
+              href="#archive-placeholder"
+              className="shrink-0 rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700"
+            >
+              {t("shifts.archive")}
+            </Link>
           </div>
-        </header>
 
-        <section className="rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
-          <div className="grid grid-cols-2 gap-2">
-            {[
-              { id: "self" as const, label: t("shifts.selfView") },
-              { id: "all" as const, label: t("shifts.allView") },
-            ].map((mode) => (
-              <button
-                key={mode.id}
-                type="button"
-                onClick={() => setViewMode(mode.id)}
-                className={`rounded-xl border px-4 py-2.5 text-sm font-semibold transition ${
-                  viewMode === mode.id
-                    ? "border-emerald-700 bg-emerald-800 text-white"
-                    : "border-transparent bg-slate-50 text-slate-600"
+          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 rounded-xl bg-slate-50 p-2">
+            <button
+              type="button"
+              onClick={() => setPeriodOffset((current) => current - 1)}
+              className="rounded-lg border border-slate-200 bg-white px-2 py-2 text-xs font-semibold text-slate-700 shadow-sm"
+            >
+              {t("shifts.previousTwoWeeks")}
+            </button>
+            <span className="text-center text-sm font-bold text-slate-900">{formatPeriod(periodDays)}</span>
+            <button
+              type="button"
+              onClick={() => setPeriodOffset((current) => current + 1)}
+              className="rounded-lg border border-slate-200 bg-white px-2 py-2 text-xs font-semibold text-slate-700 shadow-sm"
+            >
+              {t("shifts.nextTwoWeeks")}
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <section className="grid grid-cols-3 gap-2">
+        <SummaryItem label={t("shifts.summary.workingPeople")} value={`${workingAssignments.length}${t("shifts.peopleCountSuffix")}`} />
+        <SummaryItem label={t("shifts.summary.pendingRequests")} value={`${pendingRequests}${t("shifts.itemsCountSuffix")}`} />
+        <SummaryItem
+          label={t("shifts.summary.myNextShift")}
+          value={
+            nextSelfShift?.assignment
+              ? `${formatDayLabel(nextSelfShift.day)} ${getShiftCellMeta(nextSelfShift.assignment.shift).marker}`
+              : t("shifts.noShift")
+          }
+        />
+      </section>
+
+      <section className="space-y-4">
+        {weekGroups.map((week) => (
+          <WeekTable key={week.label} week={week} assignments={assignments} t={t} />
+        ))}
+      </section>
+
+      <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+        <h2 className="text-sm font-bold text-slate-900">{t("shifts.legend")}</h2>
+        <div className="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-3">
+          {(["shift_1", "shift_2", "full_day", "off", "vacation", "sick"] as ShiftCode[]).map((code) => {
+            const meta = getShiftCellMeta(code);
+            return (
+              <div key={code} className="flex items-center gap-2">
+                <span className={`inline-flex min-w-10 justify-center rounded-md border px-2 py-1 font-bold ${meta.className}`}>
+                  {meta.marker}
+                </span>
+                <span className="text-slate-600">{meta.label}</span>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="grid grid-cols-2 gap-2">
+        {[
+          { href: "/requests", label: t("shifts.shiftRequest") },
+          { href: "/suggestions", label: t("shifts.suggestions") },
+          { href: "/recipes", label: t("shifts.recipes") },
+        ].map((action) => (
+          <Link
+            key={action.href}
+            href={action.href}
+            className="rounded-xl border border-emerald-200 bg-white px-3 py-3 text-center text-sm font-semibold text-emerald-800 shadow-sm"
+          >
+            {action.label}
+          </Link>
+        ))}
+      </section>
+
+      <p id="archive-placeholder" className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-600 shadow-sm">
+        {t("shifts.archivePlaceholder")}
+      </p>
+
+      <p className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-600 shadow-sm">
+        {t("shifts.demoNote")}
+      </p>
+    </div>
+  );
+}
+
+function SummaryItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+      <p className="text-[11px] font-semibold leading-4 text-slate-500">{label}</p>
+      <p className="mt-1 truncate text-sm font-bold text-slate-950">{value}</p>
+    </div>
+  );
+}
+
+function WeekTable({
+  week,
+  assignments,
+  t,
+}: {
+  week: WeekGroup;
+  assignments: Record<string, Assignment[]>;
+  t: (key: string) => string;
+}) {
+  return (
+    <article className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="border-b border-slate-200 bg-slate-50 px-3 py-3">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-base font-bold text-slate-950">
+            {week.label} <span className="text-sm font-semibold text-slate-600">{formatWeekRange(week.days)}</span>
+          </h2>
+          <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-slate-600">
+            {employees.length}
+            {t("shifts.peopleCountSuffix")}
+          </span>
+        </div>
+      </div>
+
+      <div className="overflow-x-auto">
+        <div className="min-w-[760px]">
+          <div className="grid grid-cols-[116px_repeat(7,minmax(82px,1fr))_72px] border-b border-slate-200 bg-white text-center text-xs font-semibold text-slate-500">
+            <div className="sticky left-0 z-20 border-r border-slate-200 bg-white px-2 py-2 text-left">{t("shifts.employee")}</div>
+            {week.days.map((day) => (
+              <div key={day.key} className="border-r border-slate-100 px-1 py-2">
+                <span className="block font-bold text-slate-900">{formatDayLabel(day)}</span>
+                <span className="block text-[11px]">{day.weekday}</span>
+              </div>
+            ))}
+            <div className="px-1 py-2">{t("shifts.weeklyTotal")}</div>
+          </div>
+
+          {employees.map((employee) => {
+            const isSelf = employee.id === selfEmployeeId;
+            const weeklyTotal = calculateWeeklyTotal(assignments, employee.id, week.days);
+            return (
+              <div
+                key={employee.id}
+                className={`grid grid-cols-[116px_repeat(7,minmax(82px,1fr))_72px] border-b border-slate-100 text-center text-xs last:border-b-0 ${
+                  isSelf ? "bg-emerald-50/55" : "bg-white"
                 }`}
               >
-                {mode.label}
-              </button>
-            ))}
-          </div>
-        </section>
-
-        <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-          <div className="flex items-center justify-between gap-2">
-            <div>
-              <h2 className="font-semibold text-slate-900">{t("shifts.twoWeekSchedule")}</h2>
-              <p className="text-xs text-slate-500">{t("shifts.slideHint")}</p>
-            </div>
-            <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-800">{t("shifts.daysCount")}</span>
-          </div>
-
-          <div className="mt-3 flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2">
-            {Array.from({ length: 4 }, (_, index) => days.slice(index * 14, index * 14 + 14)).map((period, index) => (
-              <div key={index} className="grid min-w-full snap-start grid-cols-7 gap-1.5">
-                {period.map((day) => {
-                  const dailyAssignments = assignments[day.key] ?? [];
-                  const selfAssignment = dailyAssignments.find((assignment) => assignment.employeeId === selfEmployeeId);
-                  const selfShift = selfAssignment ? getShiftType(selfAssignment.shift) : null;
-                  const isToday = day.key === mockToday;
-                  const isSelected = day.key === selectedDate;
-
-                  return (
-                    <button
-                      key={day.key}
-                      type="button"
-                      onClick={() => setSelectedDate(day.key)}
-                      className={`min-h-[106px] rounded-xl border p-1.5 text-left transition ${
-                        isSelected
-                          ? "border-amber-500 bg-amber-50 shadow-sm"
-                          : isToday
-                            ? "border-emerald-300 bg-emerald-50"
-                            : "border-slate-100 bg-slate-50"
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-0.5">
-                        <span className="text-[10px] text-slate-500">{day.weekday}</span>
-                        {isToday ? <span className="text-[9px] font-semibold text-emerald-700">{t("shifts.today")}</span> : null}
-                      </div>
-                      <span className="block text-sm font-bold text-slate-900">{day.day}</span>
-
-                      {viewMode === "self" ? (
-                        <span
-                          className={`mt-3 block truncate text-xs font-semibold ${
-                            selfShift?.code === "sick" ? "text-rose-700" : "text-emerald-800"
-                          }`}
-                        >
-                          {selfShift?.marker ?? t("shifts.noShift")}
-                        </span>
-                      ) : (
-                        <span className="mt-1 block text-[9px] leading-4 text-slate-600">
-                          <span className="block truncate">① {formatGroupSummary(dailyAssignments, "shift_1")}</span>
-                          <span className="block truncate">② {formatGroupSummary(dailyAssignments, "shift_2")}</span>
-                          <span className="block truncate">通 {formatGroupSummary(dailyAssignments, "full_day")}</span>
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            ))}
-          </div>
-          <p className="mt-1 text-center text-xs text-slate-500">← {t("shifts.slideHint")} →</p>
-        </section>
-
-        {viewMode === "self" ? (
-          <>
-            <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <h2 className="font-semibold text-slate-900">{t("shifts.myShift")}</h2>
-              <p className="mt-1 text-sm text-slate-500">{formatDate(selectedDay)}</p>
-              {selectedSelfShift ? (
-                <div className="mt-3 rounded-xl border border-amber-100 bg-amber-50 p-3">
-                  <div className="flex items-center gap-3">
-                    <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-900 text-xs font-bold text-white">
-                      YH
-                    </span>
-                    <div>
-                      <p className="font-semibold text-slate-900">{selectedSelfShift.label}</p>
-                      {selectedSelfShift.time ? <p className="text-sm text-emerald-800">{selectedSelfShift.time}</p> : null}
+                <div
+                  className={`sticky left-0 z-10 flex min-h-14 items-center border-r border-slate-200 px-2 text-left ${
+                    isSelf ? "border-l-4 border-l-emerald-600 bg-emerald-50" : "bg-white"
+                  }`}
+                >
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="truncate text-[12px] font-bold text-slate-900">{employee.name}</span>
+                      {isSelf ? (
+                        <span className="rounded-full bg-emerald-700 px-1.5 py-0.5 text-[9px] font-bold text-white">{t("shifts.you")}</span>
+                      ) : null}
                     </div>
+                    <span className="text-[10px] text-slate-500">{employee.initials}</span>
                   </div>
-                  <p className="mt-3 text-sm text-slate-600">
-                    {selectedSelfShift.code === "off"
-                      ? t("shifts.status.off")
-                      : selectedSelfShift.code === "vacation"
-                        ? t("shifts.status.vacation")
-                        : selectedSelfShift.code === "sick"
-                          ? t("shifts.status.sick")
-                          : t("shifts.status.working")}
-                  </p>
                 </div>
-              ) : (
-                <p className="mt-3 rounded-xl bg-slate-50 p-4 text-sm text-slate-500">{t("shifts.noShift")}</p>
-              )}
-            </section>
 
-            <section className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <div>
-                <h2 className="font-semibold text-slate-900">{t("shifts.report.title")}</h2>
-                <p className="mt-1 text-sm text-slate-500">{t("shifts.report.subtitle")}</p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <label className="block text-sm font-semibold text-slate-800">
-                  {t("shifts.report.startTime")}
-                  <input
-                    type="time"
-                    value={startTime}
-                    onChange={(event) => setStartTime(event.target.value)}
-                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
-                  />
-                </label>
-                <label className="block text-sm font-semibold text-slate-800">
-                  {t("shifts.report.endTime")}
-                  <input
-                    type="time"
-                    value={endTime}
-                    onChange={(event) => setEndTime(event.target.value)}
-                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
-                  />
-                </label>
-              </div>
-
-              <div>
-                <p className="text-sm font-semibold text-slate-800">{t("shifts.report.break")}</p>
-                <div className="mt-2 grid grid-cols-3 gap-2">
-                  {breakOptions.map((option) => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => setBreakMinutes(option.value)}
-                      className={`rounded-xl border px-3 py-2 text-sm font-semibold ${
-                        breakMinutes === option.value
-                          ? "border-emerald-700 bg-emerald-800 text-white"
-                          : "border-slate-200 bg-slate-50 text-slate-700"
-                      }`}
-                    >
-                      {t(option.labelKey)}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <label className="block text-sm font-semibold text-slate-800">
-                {t("shifts.report.transportCost")}
-                <div className="mt-1 flex items-center gap-2">
-                  <input
-                    type="number"
-                    min="0"
-                    value={transportCost}
-                    onChange={(event) => setTransportCost(event.target.value)}
-                    placeholder="例）420"
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
-                  />
-                  <span className="text-sm font-semibold text-slate-600">円</span>
-                </div>
-              </label>
-
-              <label className="block text-sm font-semibold text-slate-800">
-                {t("shifts.report.memo")}
-                <textarea
-                  value={memo}
-                  onChange={(event) => setMemo(event.target.value)}
-                  placeholder={t("shifts.report.memoPlaceholder")}
-                  rows={3}
-                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
-                />
-              </label>
-
-              <div className="grid grid-cols-3 gap-2 rounded-xl bg-slate-50 p-3 text-center">
-                <div>
-                  <p className="text-xs text-slate-500">{t("shifts.report.workTime")}</p>
-                  <p className="mt-1 font-semibold text-slate-900">{formatHours(workPreview.totalMinutes, t("shifts.report.notEntered"))}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-500">{t("shifts.report.break")}</p>
-                  <p className="mt-1 font-semibold text-slate-900">{formatBreak(breakMinutes, t)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-500">{t("shifts.report.actualWorkTime")}</p>
-                  <p className="mt-1 font-semibold text-emerald-800">{formatHours(workPreview.actualMinutes, t("shifts.report.notEntered"))}</p>
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-amber-100 bg-amber-50 p-3">
-                <p className="text-sm font-semibold text-slate-800">{t("shifts.report.longerThanPlanned")}</p>
-                <div className="mt-2 grid grid-cols-2 gap-2">
-                  {[
-                    { label: t("shifts.report.yes"), value: true },
-                    { label: t("shifts.report.no"), value: false },
-                  ].map((option) => (
-                    <button
-                      key={option.label}
-                      type="button"
-                      onClick={() => setHasOvertime(option.value)}
-                      className={`rounded-xl border px-3 py-2 text-sm font-semibold ${
-                        hasOvertime === option.value
-                          ? "border-amber-600 bg-amber-100 text-amber-900"
-                          : "border-slate-200 bg-white text-slate-700"
-                      }`}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-                {hasOvertime ? (
-                  <label className="mt-3 block text-sm font-semibold text-slate-800">
-                    {t("shifts.report.reason")}
-                    <textarea
-                      value={overtimeReason}
-                      onChange={(event) => setOvertimeReason(event.target.value)}
-                      placeholder={t("shifts.report.reasonPlaceholder")}
-                      rows={2}
-                      className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
-                    />
-                  </label>
-                ) : null}
-              </div>
-
-              {reportError ? <p className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700">{reportError}</p> : null}
-              {reportSuccess ? (
-                <p className="rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{reportSuccess}</p>
-              ) : null}
-
-              <button
-                type="button"
-                onClick={saveWorkReport}
-                className="w-full rounded-xl bg-emerald-800 px-4 py-3 text-sm font-semibold text-white shadow-sm"
-              >
-                {t("shifts.report.save")}
-              </button>
-            </section>
-
-            <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <h2 className="font-semibold text-slate-900">{t("shifts.report.recentTitle")}</h2>
-              <div className="mt-3 space-y-2">
-                {reports.map((report) => {
-                  const start = timeToMinutes(report.startTime);
-                  const end = timeToMinutes(report.endTime);
-                  const actualMinutes = start !== null && end !== null ? end - start - report.breakMinutes : null;
+                {week.days.map((day) => {
+                  const assignment = getEmployeeShiftForDate(assignments, employee.id, day.key);
+                  if (!assignment) {
+                    return <div key={day.key} className="flex min-h-14 items-center justify-center border-r border-slate-100 bg-white" />;
+                  }
+                  const meta = getShiftCellMeta(assignment.shift);
                   return (
-                    <article key={report.id} className="rounded-xl border border-slate-100 bg-slate-50 p-3">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-sm font-semibold text-slate-900">{formatReportDate(report.date)}</p>
-                          <p className="text-xs text-slate-600">
-                            {report.startTime}–{report.endTime} / {t("shifts.report.break")} {formatBreak(report.breakMinutes, t)}
-                          </p>
-                        </div>
-                        <span className="rounded-full bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-800">
-                          {t("shifts.report.actualWorkTime")} {formatHours(actualMinutes, t("shifts.report.notEntered"))}
-                        </span>
-                      </div>
-                      <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-600">
-                        <span>
-                          {t("shifts.report.transportCost")} {report.transportCost.toLocaleString("ja-JP")}円
-                        </span>
-                        <span>
-                          {t("shifts.report.longerThanPlannedShort")}:{" "}
-                          {report.hasOvertime ? t("shifts.report.yes") : t("shifts.report.no")}
-                        </span>
-                      </div>
-                      {report.overtimeReason ? (
-                        <p className="mt-1 text-xs text-slate-500">
-                          {t("shifts.report.reason")}: {report.overtimeReason}
-                        </p>
-                      ) : null}
-                      {report.memo ? (
-                        <p className="mt-1 text-xs text-slate-500">
-                          {t("shifts.report.memo")}: {report.memo}
-                        </p>
-                      ) : null}
-                    </article>
-                  );
-                })}
-              </div>
-            </section>
-          </>
-        ) : (
-          <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <h2 className="font-semibold text-slate-900">{t("shifts.everyoneShift")}</h2>
-            <p className="mt-1 text-sm text-slate-500">{formatDate(selectedDay)}</p>
-            <div className="mt-3 space-y-2">
-              {shiftTypes.map((shift) => {
-                const members = selectedAssignments.filter((assignment) => assignment.shift === shift.code);
-                return (
-                  <div key={shift.code} className="rounded-xl border border-slate-100 bg-slate-50 p-2.5">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-sm font-semibold text-slate-800">
-                        {shift.label} {shift.time}
-                      </p>
-                      <span className="text-xs text-slate-500">
-                        {members.length}
-                        {t("shifts.peopleCountSuffix")}
+                    <div key={day.key} className="flex min-h-14 items-center justify-center border-r border-slate-100 px-1 py-1.5">
+                      <span className={`inline-flex w-full flex-col rounded-lg border px-1.5 py-1 font-bold leading-tight ${meta.className}`}>
+                        <span>{meta.marker}</span>
+                        {meta.time ? <span className="hidden pt-0.5 text-[9px] font-semibold sm:block">{meta.time}</span> : null}
                       </span>
                     </div>
-                    {members.length === 0 ? (
-                      <p className="mt-2 text-xs text-slate-400">{t("shifts.noMembers")}</p>
-                    ) : (
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        {members.map((assignment) => {
-                          const employee = employees.find((item) => item.id === assignment.employeeId);
-                          return employee ? (
-                            <div key={employee.id} className="flex items-center gap-2 rounded-lg bg-white px-2 py-1.5">
-                              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-900 text-[10px] font-bold text-white">
-                                {employee.initials}
-                              </span>
-                              <span className="text-xs font-medium text-slate-700">{employee.name}</span>
-                            </div>
-                          ) : null;
-                        })}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </section>
-        )}
+                  );
+                })}
 
-        <section className="grid grid-cols-2 gap-2">
-          {[
-            { href: "/requests", label: t("shifts.shiftRequest") },
-            { href: "/suggestions", label: t("shifts.suggestions") },
-            { href: "/recipes", label: t("shifts.recipes") },
-          ].map((action) => (
-            <Link
-              key={action.href}
-              href={action.href}
-              className="rounded-xl border border-emerald-200 bg-white px-3 py-3 text-center text-sm font-semibold text-emerald-800 shadow-sm"
-            >
-              {action.label}
-            </Link>
-          ))}
-        </section>
+                <div className="flex min-h-14 items-center justify-center px-1 font-bold text-slate-900">{formatHours(weeklyTotal)}</div>
+              </div>
+            );
+          })}
 
-        <p className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-600 shadow-sm">
-          {t("shifts.demoNote")}
-        </p>
+          <div className="grid grid-cols-[116px_repeat(7,minmax(82px,1fr))_72px] bg-slate-50 text-center text-[11px] font-semibold text-slate-600">
+            <div className="sticky left-0 z-10 border-r border-slate-200 bg-slate-50 px-2 py-2 text-left">{t("shifts.staffing")}</div>
+            {week.days.map((day) => (
+              <div key={day.key} className="space-y-1 border-r border-slate-100 px-1 py-2">
+                <span className="block text-emerald-700">
+                  AM {countWorkingPeople(assignments, day, ["shift_1", "full_day"])}
+                  {t("shifts.peopleCountSuffix")}
+                </span>
+                <span className="block text-amber-700">
+                  PM {countWorkingPeople(assignments, day, ["shift_2", "full_day"])}
+                  {t("shifts.peopleCountSuffix")}
+                </span>
+              </div>
+            ))}
+            <div className="px-1 py-2 text-slate-400">-</div>
+          </div>
+        </div>
       </div>
+    </article>
   );
 }
