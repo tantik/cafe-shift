@@ -6,9 +6,7 @@ import { useI18n } from '@/lib/i18n/use-i18n';
 
 const navItems = [
   { href: '/shifts', labelKey: 'nav.shifts' },
-  { href: '/requests', labelKey: 'nav.requests' },
   { href: '/recipes', labelKey: 'nav.recipes' },
-  { href: '/manager', labelKey: 'nav.manager' },
 ];
 
 export default function MobileNav() {

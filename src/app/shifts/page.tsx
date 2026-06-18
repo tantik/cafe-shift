@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import AppShell from "@/components/app-shell";
 import { useI18n } from "@/lib/i18n/use-i18n";
 import { DEMO_START_DATE, shiftTypes as coreShiftTypes } from "@/lib/mock-data/core";
@@ -314,6 +315,13 @@ function ShiftsContent() {
           })}
         </div>
       </section>
+
+      <Link
+        href="/requests"
+        className="block rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-3 text-center text-sm font-bold text-emerald-900 shadow-sm"
+      >
+        {t("shifts.nextMonthShiftRequestButton")}
+      </Link>
 
       <section className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
         <div>

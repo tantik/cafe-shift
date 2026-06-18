@@ -1,157 +1,472 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import AppShell from '@/components/app-shell';
-import { useI18n } from '@/lib/i18n/use-i18n';
+import { useState } from "react";
+import Image from "next/image";
+import AppShell from "@/components/app-shell";
+import { useI18n } from "@/lib/i18n/use-i18n";
+
+type RecipeCategory =
+  | "Ceremonia"
+  | "Summer Special"
+  | "Standard"
+  | "Hojicha"
+  | "Coffee & Other"
+  | "Ice Cream"
+  | "Japanese Sweets"
+  | "Option";
 
 type Recipe = {
   id: string;
-  name: string;
-  label: string;
-  color: string;
-  description?: string;
+  titleJa: string;
+  titleEn: string;
+  category: RecipeCategory;
+  badge?: string;
+  imageUrl?: string;
+  descriptionJa: string;
   ingredients: string[];
   steps: string[];
+  prepLiquid?: string[];
   notes?: string[];
 };
 
-const mockRecipes: Recipe[] = [
+const matchaLiquid = [
+  "抹茶パウダーを小さなカップに入れる。",
+  "少量のお湯でダマがなくなるまで混ぜる。",
+  "冷水を加えて、色と泡が整うまでしっかり混ぜる。",
+];
+
+const hojichaLiquid = [
+  "ほうじ茶パウダーを少量のお湯で溶く。",
+  "粉が残らないようにカップの底まで混ぜる。",
+];
+
+function drinkSteps(base: string, finish: string) {
+  return [
+    "提供カップを準備し、氷を入れる。",
+    `${base}を入れて軽く混ぜる。`,
+    "ミルク・水・ソーダなど指定の液体を注ぐ。",
+    "抹茶液またはほうじ茶液をゆっくり重ねる。",
+    finish,
+    "フタ、ストロー、カップの汚れを確認して提供する。",
+  ];
+}
+
+function simpleSteps(base: string, finish: string) {
+  return [
+    "提供カップまたは皿を準備する。",
+    base,
+    finish,
+    "見た目と温度を確認して提供する。",
+  ];
+}
+
+// Demo recipe steps. Replace with official store recipes before production.
+const recipes: Recipe[] = [
   {
-    id: 'matcha_latte',
-    name: '抹茶ラテ',
-    label: '人気',
-    color: 'bg-green-100',
-    description: 'クリーミーな牛乳と抹茶の香りが調和した人気メニュー。',
-    ingredients: [
-      'シロップ 10g',
-      '牛乳 160g',
-      '氷 適量',
-      '抹茶 7g',
-      'お湯 30g',
-      '冷水 20g',
-    ],
-    steps: [
-      '小さいカップにシロップを入れる。',
-      '牛乳を160g入れて、マドラーでよく混ぜる。',
-      'グラスに氷を入れる。',
-      '抹茶液を作る。',
-      '牛乳の上から抹茶液をゆっくり注ぐ。',
-      'フタをして完成。',
-    ],
-    notes: [
-      '抹茶液の作り方:',
-      '1. 抹茶7gをカップに入れる。',
-      '2. お湯30gを加えて、ダマがなくなるまで混ぜる。',
-      '3. 冷水20gを加える。',
-      '4. 泡が出るまでしっかり混ぜる。',
-    ],
+    id: "ceremonia-matcha-latte",
+    titleJa: "抹茶ラテ",
+    titleEn: "Matcha Latte",
+    category: "Ceremonia",
+    badge: "人気",
+    imageUrl: "/recipes/matcha-latte.jpg",
+    descriptionJa: "ミルクの甘みと抹茶の香りを重ねた看板ラテ。",
+    ingredients: ["抹茶液", "ミルク", "シロップ", "氷"],
+    steps: drinkSteps("シロップとミルク", "抹茶の層がきれいに見えるように仕上げる。"),
+    prepLiquid: matchaLiquid,
   },
   {
-    id: 'hojicha_latte',
-    name: 'ほうじ茶ラテ',
-    label: '定番',
-    color: 'bg-amber-100',
-    description: 'ほうじ茶の香ばしさが心地よいリラックスドリンク。',
-    ingredients: ['ほうじ茶パウダー 5g', '牛乳 180g', '蜂蜜 10g', '氷 適量'],
-    steps: [
-      'グラスに氷を入れる。',
-      'ほうじ茶パウダーを少量のお湯で溶く。',
-      '蜂蜜を加える。',
-      '牛乳を注いでよく混ぜる。',
-    ],
+    id: "ceremonia-sakura-matcha-latte-float",
+    titleJa: "サクラ抹茶ラテフロート",
+    titleEn: "Sakura Matcha Latte Float",
+    category: "Ceremonia",
+    badge: "おすすめ",
+    imageUrl: "/recipes/sakura-matcha-latte-float.jpg",
+    descriptionJa: "桜の香り、抹茶、アイスを合わせた華やかなフロート。",
+    ingredients: ["抹茶液", "ミルク", "桜シロップ", "アイスクリーム", "氷"],
+    steps: drinkSteps("桜シロップとミルク", "アイスをのせ、トップの位置を整える。"),
+    prepLiquid: matchaLiquid,
   },
   {
-    id: 'sencha',
-    name: '煎茶',
-    label: '定番',
-    color: 'bg-teal-100',
-    description: '爽やかな緑茶の香りが特徴。シンプルで飲みやすい。',
-    ingredients: ['煎茶 3g', 'お湯 150ml'],
-    steps: [
-      'お湯を75℃に冷ます。',
-      'カップに煎茶を入れる。',
-      'お湯を注ぎ、1〜2分待つ。',
-      '完成。',
-    ],
+    id: "ceremonia-pure-matcha",
+    titleJa: "ピュア抹茶",
+    titleEn: "Pure Matcha",
+    category: "Ceremonia",
+    imageUrl: "/recipes/pure-matcha.jpg",
+    descriptionJa: "抹茶そのものの香りと余韻を楽しむシンプルな一杯。",
+    ingredients: ["抹茶パウダー", "お湯", "冷水または温水"],
+    steps: simpleSteps("抹茶をお湯で溶き、指定量の水または湯で濃さを整える。", "泡と色味を確認する。"),
+    prepLiquid: matchaLiquid,
   },
   {
-    id: 'genmai_cha',
-    name: '玄米茶',
-    label: '定番',
-    color: 'bg-yellow-100',
-    description: '玄米の香りが香ばしい健康的なお茶。',
-    ingredients: ['玄米茶 3g', 'お湯 150ml'],
-    steps: [
-      'お湯を75℃に冷ます。',
-      'カップに玄米茶を入れる。',
-      'お湯を注ぎ、1分待つ。',
-      '完成。',
-    ],
+    id: "ceremonia-strawberry-matcha-latte",
+    titleJa: "ストロベリー抹茶ラテ",
+    titleEn: "Strawberry Matcha Latte",
+    category: "Ceremonia",
+    badge: "人気",
+    imageUrl: "/recipes/strawberry-matcha-latte.jpg",
+    descriptionJa: "苺の果実感と抹茶の苦みを合わせたデザートラテ。",
+    ingredients: ["抹茶液", "ミルク", "ストロベリーソース", "氷"],
+    steps: drinkSteps("ストロベリーソースとミルク", "赤、白、緑の層を崩しすぎないように整える。"),
+    prepLiquid: matchaLiquid,
   },
   {
-    id: 'wakocha',
-    name: '和紅茶',
-    label: '季節',
-    color: 'bg-rose-100',
-    description: '日本産の上品な紅茶。温かみのある味わい。',
-    ingredients: ['和紅茶 3g', 'お湯 160ml'],
-    steps: [
-      'お湯を90℃に冷ます。',
-      'カップに和紅茶を入れる。',
-      'お湯を注ぎ、3〜4分待つ。',
-      '完成。',
-    ],
+    id: "ceremonia-gold-powder-matcha-latte",
+    titleJa: "ゴールドパウダー抹茶ラテ",
+    titleEn: "Gold Powder Matcha Latte",
+    category: "Ceremonia",
+    badge: "NEW",
+    imageUrl: "/recipes/gold-powder-matcha-latte.jpg",
+    descriptionJa: "抹茶ラテに金粉の華やかさを添えた特別感のある一杯。",
+    ingredients: ["抹茶液", "ミルク", "シロップ", "ゴールドパウダー", "氷"],
+    steps: drinkSteps("シロップとミルク", "表面にゴールドパウダーを少量のせる。"),
+    prepLiquid: matchaLiquid,
   },
   {
-    id: 'iced_tea',
-    name: '季節のアイスティー',
-    label: '季節',
-    color: 'bg-cyan-100',
-    description: '季節の紅茶を使ったさっぱりアイスドリンク。',
-    ingredients: ['季節の紅茶 5g', 'お湯 100ml', '氷 適量', '砂糖 5g'],
-    steps: [
-      'グラスに氷を入れる。',
-      'お湯を注ぎ、紅茶を浸す。',
-      '砂糖を加える。',
-      'かき混ぜて完成。',
-    ],
+    id: "mango-matcha-latte",
+    titleJa: "マンゴー抹茶ラテ",
+    titleEn: "Mango Matcha Latte",
+    category: "Summer Special",
+    badge: "季節",
+    descriptionJa: "マンゴーの甘みと抹茶を合わせた夏向けラテ。",
+    ingredients: ["抹茶液", "ミルク", "マンゴーソース", "氷"],
+    steps: drinkSteps("マンゴーソースとミルク", "マンゴーが底に見えるように整える。"),
+    prepLiquid: matchaLiquid,
   },
   {
-    id: 'ice_matcha',
-    name: 'アイス抹茶',
-    label: '人気',
-    color: 'bg-green-100',
-    description: '冷たい牛乳と抹茶のさっぱりした組み合わせ。',
-    ingredients: [
-      '抹茶パウダー 7g',
-      'お湯 30g',
-      '牛乳 180g',
-      '氷 適量',
-      'シロップ 10g',
-    ],
-    steps: [
-      '抹茶をお湯でよく溶く。',
-      'グラスに氷を入れる。',
-      '抹茶液を注ぐ。',
-      '牛乳をゆっくり注ぐ。',
-      'シロップを加えて完成。',
-    ],
+    id: "raspberry-passion-matcha-latte",
+    titleJa: "ラズベリー＆パッションフルーツ抹茶ラテ",
+    titleEn: "Raspberry & Passion Fruit Matcha Latte",
+    category: "Summer Special",
+    badge: "季節",
+    descriptionJa: "酸味のあるフルーツと抹茶を重ねた爽やかなラテ。",
+    ingredients: ["抹茶液", "ミルク", "ラズベリーソース", "パッションフルーツソース", "氷"],
+    steps: drinkSteps("フルーツソースとミルク", "果肉感が見えるようにカップ側面を確認する。"),
+    prepLiquid: matchaLiquid,
   },
   {
-    id: 'yuzu_sencha',
-    name: 'ゆず煎茶',
-    label: '季節',
-    color: 'bg-yellow-50',
-    description: '爽やかなゆずの香りと煎茶の組み合わせ。',
-    ingredients: ['煎茶 3g', 'お湯 150ml', 'ゆず果汁 10ml'],
-    steps: [
-      'お湯を75℃に冷ます。',
-      'カップに煎茶を入れる。',
-      'お湯を注ぎ、1〜2分待つ。',
-      'ゆず果汁を加えて完成。',
-    ],
+    id: "matcha-cloud-coconut-water",
+    titleJa: "抹茶クラウド ココナッツウォーター",
+    titleEn: "Matcha Cloud Coconut Water",
+    category: "Summer Special",
+    badge: "NEW",
+    descriptionJa: "軽い口当たりのココナッツウォーターに抹茶を浮かべる夏ドリンク。",
+    ingredients: ["抹茶液", "ココナッツウォーター", "フォーム", "氷"],
+    steps: drinkSteps("ココナッツウォーター", "フォームをのせて雲のような見た目にする。"),
+    prepLiquid: matchaLiquid,
+  },
+  {
+    id: "matcha-soda",
+    titleJa: "抹茶ソーダ",
+    titleEn: "Matcha Soda",
+    category: "Summer Special",
+    badge: "季節",
+    descriptionJa: "抹茶の香りをソーダで軽く楽しむリフレッシュドリンク。",
+    ingredients: ["抹茶液", "ソーダ", "シロップ", "氷"],
+    steps: drinkSteps("シロップとソーダ", "炭酸が抜けないように混ぜすぎず仕上げる。"),
+    prepLiquid: matchaLiquid,
+  },
+  {
+    id: "matcha-soda-float",
+    titleJa: "抹茶ソーダフロート",
+    titleEn: "Matcha Soda Float",
+    category: "Summer Special",
+    badge: "季節",
+    descriptionJa: "抹茶ソーダにアイスをのせたデザート感のある一杯。",
+    ingredients: ["抹茶液", "ソーダ", "シロップ", "アイスクリーム", "氷"],
+    steps: drinkSteps("シロップとソーダ", "アイスを静かにのせ、泡立ちを確認する。"),
+    prepLiquid: matchaLiquid,
+  },
+  {
+    id: "sakura-matcha-coconut-float",
+    titleJa: "サクラ抹茶ラテ ココナッツフロート",
+    titleEn: "Sakura Matcha Latte Coconut Float",
+    category: "Summer Special",
+    badge: "おすすめ",
+    descriptionJa: "桜抹茶ラテにココナッツの香りとアイスを合わせた季節メニュー。",
+    ingredients: ["抹茶液", "ココナッツミルク", "桜シロップ", "アイスクリーム", "氷"],
+    steps: drinkSteps("桜シロップとココナッツミルク", "アイスをのせ、層とトップを整える。"),
+    prepLiquid: matchaLiquid,
+  },
+  {
+    id: "standard-matcha-latte",
+    titleJa: "抹茶ラテ",
+    titleEn: "Matcha Latte",
+    category: "Standard",
+    badge: "人気",
+    descriptionJa: "毎日の提供に使う定番の抹茶ラテ。",
+    ingredients: ["抹茶液", "ミルク", "シロップ", "氷"],
+    steps: drinkSteps("シロップとミルク", "味の濃さとカップ外側の汚れを確認する。"),
+    prepLiquid: matchaLiquid,
+  },
+  {
+    id: "standard-sakura-matcha-latte-float",
+    titleJa: "桜抹茶ラテフロート",
+    titleEn: "Sakura Matcha Latte Float",
+    category: "Standard",
+    descriptionJa: "桜の甘さを足した抹茶ラテフロート。",
+    ingredients: ["抹茶液", "ミルク", "桜シロップ", "アイスクリーム", "氷"],
+    steps: drinkSteps("桜シロップとミルク", "アイスをのせ、提供前に沈みすぎていないか確認する。"),
+    prepLiquid: matchaLiquid,
+  },
+  {
+    id: "standard-pure-matcha",
+    titleJa: "ピュア抹茶",
+    titleEn: "Pure Matcha",
+    category: "Standard",
+    descriptionJa: "シンプルに抹茶の香りを味わう定番メニュー。",
+    ingredients: ["抹茶パウダー", "お湯", "水"],
+    steps: simpleSteps("抹茶を溶き、指定の濃さまで水または湯で調整する。", "泡立ちと色味を確認する。"),
+    prepLiquid: matchaLiquid,
+  },
+  {
+    id: "hojicha-latte",
+    titleJa: "ほうじ茶ラテ",
+    titleEn: "Hojicha Latte",
+    category: "Hojicha",
+    badge: "人気",
+    descriptionJa: "香ばしいほうじ茶とミルクのやさしいラテ。",
+    ingredients: ["ほうじ茶液", "ミルク", "シロップ", "氷"],
+    steps: drinkSteps("シロップとミルク", "ほうじ茶液を重ね、香ばしさが出るように仕上げる。"),
+    prepLiquid: hojichaLiquid,
+  },
+  {
+    id: "pure-hojicha",
+    titleJa: "ピュアほうじ茶",
+    titleEn: "Pure Hojicha",
+    category: "Hojicha",
+    descriptionJa: "ほうじ茶の香ばしさをストレートに楽しむ一杯。",
+    ingredients: ["ほうじ茶パウダー", "お湯", "水"],
+    steps: simpleSteps("ほうじ茶をお湯で溶き、指定の濃さまで調整する。", "粉残りがないか確認する。"),
+    prepLiquid: hojichaLiquid,
+  },
+  {
+    id: "hojicha-chocolate-latte",
+    titleJa: "ほうじ茶チョコラテ",
+    titleEn: "Hojicha Chocolate Latte",
+    category: "Hojicha",
+    badge: "おすすめ",
+    descriptionJa: "ほうじ茶の香ばしさにチョコのコクを合わせたラテ。",
+    ingredients: ["ほうじ茶液", "ミルク", "チョコソース", "氷"],
+    steps: drinkSteps("チョコソースとミルク", "チョコが底に残りすぎないよう軽く混ぜる。"),
+    prepLiquid: hojichaLiquid,
+  },
+  {
+    id: "strawberry-hojicha-chocolate-latte",
+    titleJa: "ストロベリーほうじ茶チョコラテ",
+    titleEn: "Strawberry Hojicha Chocolate Latte",
+    category: "Hojicha",
+    badge: "季節",
+    descriptionJa: "苺、チョコ、ほうじ茶を合わせたデザートラテ。",
+    ingredients: ["ほうじ茶液", "ミルク", "ストロベリーソース", "チョコソース", "氷"],
+    steps: drinkSteps("ストロベリーソース、チョコソース、ミルク", "層と色のバランスを見て仕上げる。"),
+    prepLiquid: hojichaLiquid,
+  },
+  {
+    id: "coffee",
+    titleJa: "コーヒー",
+    titleEn: "Coffee",
+    category: "Coffee & Other",
+    descriptionJa: "食事や甘味に合わせやすいベーシックなコーヒー。",
+    ingredients: ["コーヒー", "水または氷"],
+    steps: simpleSteps("指定レシピでコーヒーを抽出し、ホットまたはアイスで準備する。", "量と温度を確認する。"),
+  },
+  {
+    id: "espresso",
+    titleJa: "エスプレッソ",
+    titleEn: "Espresso",
+    category: "Coffee & Other",
+    descriptionJa: "短時間で抽出する濃厚なコーヒー。",
+    ingredients: ["エスプレッソ豆", "水"],
+    steps: simpleSteps("ポルタフィルターをセットし、エスプレッソを抽出する。", "クレマと抽出量を確認する。"),
+  },
+  {
+    id: "cafe-latte",
+    titleJa: "カフェラテ",
+    titleEn: "Cafe Latte",
+    category: "Coffee & Other",
+    descriptionJa: "エスプレッソとミルクを合わせた定番ラテ。",
+    ingredients: ["エスプレッソ", "ミルク", "氷またはスチームミルク"],
+    steps: drinkSteps("エスプレッソ", "ミルクを注ぎ、表面をきれいに整える。"),
+  },
+  {
+    id: "orange-juice",
+    titleJa: "オレンジジュース",
+    titleEn: "Orange Juice",
+    category: "Coffee & Other",
+    descriptionJa: "すっきりした酸味のソフトドリンク。",
+    ingredients: ["オレンジジュース", "氷"],
+    steps: simpleSteps("カップに氷を入れ、オレンジジュースを注ぐ。", "量とカップ外側を確認する。"),
+  },
+  {
+    id: "strawberry-milk",
+    titleJa: "ストロベリーミルク",
+    titleEn: "Strawberry Milk",
+    category: "Coffee & Other",
+    badge: "おすすめ",
+    descriptionJa: "苺ソースとミルクを合わせたやさしい甘さのドリンク。",
+    ingredients: ["ストロベリーソース", "ミルク", "氷"],
+    steps: drinkSteps("ストロベリーソースとミルク", "ピンク色が均一になるように軽く混ぜる。"),
+  },
+  {
+    id: "jasmine-tea",
+    titleJa: "ジャスミンティー",
+    titleEn: "Jasmine Tea",
+    category: "Coffee & Other",
+    descriptionJa: "香りのよいすっきりしたお茶。",
+    ingredients: ["ジャスミンティー", "水またはお湯", "氷"],
+    steps: simpleSteps("指定の濃さで抽出し、ホットまたはアイスにする。", "香りと濃さを確認する。"),
+  },
+  {
+    id: "fruit-soda",
+    titleJa: "フルーツソーダ",
+    titleEn: "Fruit Soda",
+    category: "Coffee & Other",
+    badge: "季節",
+    descriptionJa: "フルーツソースと炭酸を合わせた爽やかなソーダ。",
+    ingredients: ["フルーツソース", "ソーダ", "氷"],
+    steps: drinkSteps("フルーツソースとソーダ", "炭酸が抜けないように軽く仕上げる。"),
+  },
+  {
+    id: "draft-beer",
+    titleJa: "生ビール",
+    titleEn: "Draft Beer",
+    category: "Coffee & Other",
+    descriptionJa: "泡の比率を整えて提供するドラフトビール。",
+    ingredients: ["生ビール"],
+    steps: simpleSteps("グラスを傾けてビールを注ぎ、最後に泡を整える。", "泡と液量を確認する。"),
+  },
+  {
+    id: "matcha-ice-cream",
+    titleJa: "抹茶アイス",
+    titleEn: "Matcha Ice Cream",
+    category: "Ice Cream",
+    badge: "人気",
+    descriptionJa: "抹茶の風味を楽しむ定番アイス。",
+    ingredients: ["抹茶アイス", "カップまたはコーン"],
+    steps: simpleSteps("指定スクープ数を取り、形を整えて盛り付ける。", "溶けや欠けがないか確認する。"),
+  },
+  {
+    id: "vanilla-ice-cream",
+    titleJa: "バニラアイス",
+    titleEn: "Vanilla Ice Cream",
+    category: "Ice Cream",
+    descriptionJa: "甘味やフロートに合わせやすいバニラアイス。",
+    ingredients: ["バニラアイス", "カップまたはコーン"],
+    steps: simpleSteps("指定スクープ数を取り、カップに盛り付ける。", "表面を丸く整える。"),
+  },
+  {
+    id: "coconut-milk-ice-cream",
+    titleJa: "ココナッツミルクアイス",
+    titleEn: "Coconut Milk Ice Cream",
+    category: "Ice Cream",
+    badge: "季節",
+    descriptionJa: "ココナッツの香りが軽いアイス。",
+    ingredients: ["ココナッツミルクアイス", "カップまたはコーン"],
+    steps: simpleSteps("指定スクープ数を取り、形を整える。", "香り移りがないよう器具を確認する。"),
+  },
+  {
+    id: "soy-ice-cream",
+    titleJa: "ソイアイス",
+    titleEn: "Soy Ice Cream",
+    category: "Ice Cream",
+    descriptionJa: "豆乳ベースのやさしい味わいのアイス。",
+    ingredients: ["ソイアイス", "カップまたはコーン"],
+    steps: simpleSteps("指定スクープ数を取り、カップに盛り付ける。", "アレルギー案内が必要な場合は確認する。"),
+  },
+  {
+    id: "mame-to-cha-set",
+    titleJa: "豆と茶セット",
+    titleEn: "Matcha Ice Cream, Warabi Mochi, Dango",
+    category: "Japanese Sweets",
+    badge: "おすすめ",
+    descriptionJa: "抹茶アイス、わらび餅、団子を組み合わせた看板甘味セット。",
+    ingredients: ["抹茶アイス", "わらび餅", "団子", "きな粉または黒蜜"],
+    steps: simpleSteps("皿に甘味をバランスよく配置し、アイスを最後にのせる。", "溶ける前にすぐ提供する。"),
+  },
+  {
+    id: "odango-set",
+    titleJa: "お団子セット",
+    titleEn: "Odango Set",
+    category: "Japanese Sweets",
+    descriptionJa: "団子を主役にした日本茶と相性のよいセット。",
+    ingredients: ["団子", "たれまたはトッピング"],
+    steps: simpleSteps("団子を指定数盛り付け、たれやトッピングを整える。", "串や皿の向きをそろえる。"),
+  },
+  {
+    id: "warabimochi",
+    titleJa: "わらび餅",
+    titleEn: "Warabimochi",
+    category: "Japanese Sweets",
+    descriptionJa: "ぷるっとした食感の和スイーツ。",
+    ingredients: ["わらび餅", "きな粉", "黒蜜"],
+    steps: simpleSteps("わらび餅を器に盛り、きな粉を均一にかける。", "黒蜜を添えて提供する。"),
+  },
+  {
+    id: "oat-milk",
+    titleJa: "Oat Milk",
+    titleEn: "Oat Milk",
+    category: "Option",
+    descriptionJa: "ミルク変更用のオプション。",
+    ingredients: ["オーツミルク"],
+    steps: simpleSteps("注文内容を確認し、通常ミルクの代わりにオーツミルクを使う。", "アレルギー・追加料金の案内を確認する。"),
+  },
+  {
+    id: "soy-milk",
+    titleJa: "Soy Milk",
+    titleEn: "Soy Milk",
+    category: "Option",
+    descriptionJa: "豆乳への変更オプション。",
+    ingredients: ["ソイミルク"],
+    steps: simpleSteps("注文内容を確認し、通常ミルクの代わりにソイミルクを使う。", "ミルクピッチャーの取り違えに注意する。"),
+  },
+  {
+    id: "almond-milk",
+    titleJa: "Almond Milk",
+    titleEn: "Almond Milk",
+    category: "Option",
+    descriptionJa: "アーモンドミルクへの変更オプション。",
+    ingredients: ["アーモンドミルク"],
+    steps: simpleSteps("注文内容を確認し、通常ミルクの代わりにアーモンドミルクを使う。", "ナッツアレルギーの確認が必要な場合は店長に確認する。"),
+  },
+  {
+    id: "coconut-milk",
+    titleJa: "Coconut Milk",
+    titleEn: "Coconut Milk",
+    category: "Option",
+    descriptionJa: "ココナッツミルクへの変更オプション。",
+    ingredients: ["ココナッツミルク"],
+    steps: simpleSteps("注文内容を確認し、通常ミルクの代わりにココナッツミルクを使う。", "香りが強いため、器具の使い分けを確認する。"),
+  },
+  {
+    id: "ice-cream-option",
+    titleJa: "Ice Cream Option",
+    titleEn: "Ice Cream Option",
+    category: "Option",
+    descriptionJa: "ドリンクにアイスを追加するオプション。",
+    ingredients: ["指定アイスクリーム"],
+    steps: simpleSteps("対象ドリンクを仕上げたあと、指定アイスを静かにのせる。", "フタなし提供など、提供方法を確認する。"),
   },
 ];
+
+function RecipePhoto({ recipe, compact = false, label }: { recipe: Recipe; compact?: boolean; label: string }) {
+  const className = compact
+    ? "h-12 w-full rounded-md object-cover"
+    : "aspect-[16/10] w-full rounded-lg object-cover";
+
+  if (recipe.imageUrl) {
+    return <Image src={recipe.imageUrl} alt={recipe.titleJa} width={640} height={400} className={className} />;
+  }
+
+  return (
+    <div
+      className={`flex items-center justify-center rounded-lg bg-gradient-to-br from-emerald-50 via-stone-50 to-amber-50 text-[10px] font-bold text-slate-400 ${
+        compact ? "h-12" : "aspect-[16/10]"
+      }`}
+    >
+      {label}
+    </div>
+  );
+}
 
 function RecipeCard({
   recipe,
@@ -166,24 +481,15 @@ function RecipeCard({
 }) {
   return (
     <button
+      type="button"
       onClick={onClick}
-      className={`w-full rounded-2xl transition ${
-        isSelected
-          ? 'ring-2 ring-green-700 shadow-md'
-          : 'shadow-sm shadow-slate-200 hover:shadow-md'
+      className={`w-[78px] rounded-lg border bg-white p-1 text-left transition ${
+        isSelected ? "border-emerald-700 ring-2 ring-emerald-700" : "border-slate-200 shadow-sm shadow-slate-200"
       }`}
     >
-      <div className={`rounded-2xl p-3 ${recipe.color}`}>
-        <div className="aspect-square rounded-lg bg-gradient-to-br from-white/50 to-slate-100 flex items-center justify-center text-xs text-slate-400">
-          {photoLabel}
-        </div>
-      </div>
-      <div className="mt-2 px-2 pb-2">
-        <p className="text-xs font-semibold text-slate-900 line-clamp-2">
-          {recipe.name}
-        </p>
-        <p className="mt-1 text-xs font-medium text-slate-500">{recipe.label}</p>
-      </div>
+      <RecipePhoto recipe={recipe} compact label={photoLabel} />
+      <p className="mt-1 line-clamp-2 min-h-7 text-[10px] font-bold leading-tight text-slate-900">{recipe.titleJa}</p>
+      <p className="truncate text-[9px] font-semibold text-slate-500">{recipe.category}</p>
     </button>
   );
 }
@@ -198,106 +504,82 @@ export default function RecipesPage() {
 
 function RecipesContent() {
   const { t } = useI18n();
-  const [selectedRecipeId, setSelectedRecipeId] = useState('matcha_latte');
-  const selectedRecipe = mockRecipes.find((r) => r.id === selectedRecipeId);
-
-  // gallery will render all recipes in a 2-row horizontally scrolling grid
+  const [selectedRecipeId, setSelectedRecipeId] = useState(recipes[0].id);
+  const selectedRecipe = recipes.find((recipe) => recipe.id === selectedRecipeId) ?? recipes[0];
 
   return (
-    <>
-      <div className="space-y-6 pb-4">
-        {/* Header */}
-        <section className="rounded-3xl bg-gradient-to-br from-green-50 to-teal-50 p-6 shadow-sm shadow-slate-200">
-          <h2 className="text-2xl font-semibold text-slate-900">{t("recipes.title")}</h2>
-          <p className="mt-2 text-sm text-slate-600">
-            {t("recipes.subtitle")}
-          </p>
-        </section>
+    <div className="space-y-3 pb-4">
+      <section className="overflow-x-auto p-0.5 scroll-px-1 scrollbar-hide">
+        <div className="flex w-max gap-2 pb-1">
+          {recipes.map((recipe) => (
+            <RecipeCard
+              key={recipe.id}
+              recipe={recipe}
+              isSelected={selectedRecipeId === recipe.id}
+              onClick={() => setSelectedRecipeId(recipe.id)}
+              photoLabel={t("recipes.photo")}
+            />
+          ))}
+        </div>
+      </section>
 
-        {/* Recipe Gallery */}
-        <section>
-          <div className="overflow-x-auto scrollbar-hide">
-            <div className="grid grid-rows-2 grid-flow-col auto-cols-[140px] gap-3 pb-2">
-              {mockRecipes.map((recipe) => (
-                <div key={recipe.id} className="w-[140px]">
-                  <RecipeCard
-                    recipe={recipe}
-                    isSelected={selectedRecipeId === recipe.id}
-                    onClick={() => setSelectedRecipeId(recipe.id)}
-                    photoLabel={t("recipes.photo")}
-                  />
-                </div>
+      <section className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+        <RecipePhoto recipe={selectedRecipe} label={t("recipes.photo")} />
+
+        <div className="mt-3 flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <h2 className="text-lg font-bold leading-tight text-slate-950">{selectedRecipe.titleJa}</h2>
+            <p className="mt-0.5 text-xs font-semibold text-slate-500">{selectedRecipe.titleEn}</p>
+          </div>
+          {selectedRecipe.badge ? (
+            <span className="shrink-0 rounded-md bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-800">
+              {selectedRecipe.badge}
+            </span>
+          ) : null}
+        </div>
+
+        <p className="mt-1 text-xs font-bold text-emerald-800">{selectedRecipe.category}</p>
+        <p className="mt-2 text-sm leading-relaxed text-slate-600">{selectedRecipe.descriptionJa}</p>
+
+        <div className="mt-4 border-t border-slate-100 pt-4">
+          <h3 className="text-sm font-bold text-slate-950">{t("recipes.ingredients")}</h3>
+          <ul className="mt-2 grid grid-cols-1 gap-1.5">
+            {selectedRecipe.ingredients.map((ingredient) => (
+              <li key={ingredient} className="flex items-start gap-2 text-sm text-slate-600">
+                <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-700" />
+                <span>{ingredient}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="mt-4 border-t border-slate-100 pt-4">
+          <h3 className="text-sm font-bold text-slate-950">{t("recipes.steps")}</h3>
+          <ol className="mt-2 space-y-2">
+            {selectedRecipe.steps.map((step, index) => (
+              <li key={step} className="flex gap-2 text-sm leading-relaxed text-slate-600">
+                <span className="shrink-0 font-bold text-emerald-800">{index + 1}.</span>
+                <span>{step}</span>
+              </li>
+            ))}
+          </ol>
+        </div>
+
+        {selectedRecipe.prepLiquid || selectedRecipe.notes ? (
+          <div className="mt-4 rounded-lg bg-slate-50 p-3">
+            <h3 className="text-sm font-bold text-slate-950">
+              {selectedRecipe.prepLiquid ? t("recipes.matchaLiquid") : t("recipes.tips")}
+            </h3>
+            <div className="mt-2 space-y-1.5">
+              {(selectedRecipe.prepLiquid ?? selectedRecipe.notes ?? []).map((note) => (
+                <p key={note} className="text-sm leading-relaxed text-slate-600">
+                  {note}
+                </p>
               ))}
             </div>
           </div>
-        </section>
-
-        {/* Selected Recipe Detail */}
-        {selectedRecipe && (
-          <section className="rounded-3xl bg-white p-6 shadow-sm shadow-slate-200">
-            {/* Recipe Title */}
-            <h3 className="text-2xl font-semibold text-slate-900">
-              {selectedRecipe.name}
-            </h3>
-            <p className="mt-1 text-sm font-medium text-slate-500">
-              {selectedRecipe.label}
-            </p>
-
-            {/* Description */}
-            {selectedRecipe.description && (
-              <p className="mt-3 text-sm text-slate-600">
-                {selectedRecipe.description}
-              </p>
-            )}
-
-            {/* Ingredients */}
-            <div className="mt-5 border-t border-slate-100 pt-5">
-              <h4 className="font-semibold text-slate-900">{t("recipes.ingredients")}</h4>
-              <ul className="mt-3 space-y-2">
-                {selectedRecipe.ingredients.map((ingredient, idx) => (
-                  <li key={idx} className="flex items-start gap-3 text-sm text-slate-600">
-                    <span className="mt-1 inline-block h-1.5 w-1.5 rounded-full bg-green-600 flex-none" />
-                    {ingredient}
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Steps */}
-            <div className="mt-5 border-t border-slate-100 pt-5">
-              <h4 className="font-semibold text-slate-900">{t("recipes.steps")}</h4>
-              <ol className="mt-3 space-y-2">
-                {selectedRecipe.steps.map((step, idx) => (
-                  <li key={idx} className="flex gap-3 text-sm text-slate-600">
-                    <span className="font-semibold text-green-700 flex-none">
-                      {idx + 1}.
-                    </span>
-                    {step}
-                  </li>
-                ))}
-              </ol>
-            </div>
-
-            {/* Notes */}
-            {selectedRecipe.notes && selectedRecipe.notes.length > 0 && (
-              <div className="mt-5 border-t border-slate-100 pt-5">
-                <h4 className="font-semibold text-slate-900">
-                  {selectedRecipe.name === '抹茶ラテ' ? t("recipes.matchaLiquid") : t("recipes.tips")}
-                </h4>
-                <div className="mt-3 rounded-2xl bg-slate-50 p-4">
-                  <div className="space-y-2">
-                    {selectedRecipe.notes.map((note, idx) => (
-                      <p key={idx} className="text-sm text-slate-600">
-                        {note}
-                      </p>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-          </section>
-        )}
-      </div>
+        ) : null}
+      </section>
 
       <style>{`
         .scrollbar-hide::-webkit-scrollbar {
@@ -308,6 +590,6 @@ function RecipesContent() {
           scrollbar-width: none;
         }
       `}</style>
-    </>
+    </div>
   );
 }
