@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import AppShell from "@/components/app-shell";
 import { useI18n } from "@/lib/i18n/use-i18n";
 
@@ -61,6 +60,7 @@ function simpleSteps(base: string, finish: string) {
 }
 
 // Demo recipe steps. Replace with official store recipes before production.
+// Demo image path. In production, recipe photos will come from uploaded images / storage.
 const recipes: Recipe[] = [
   {
     id: "ceremonia-matcha-latte",
@@ -448,21 +448,17 @@ const recipes: Recipe[] = [
   },
 ];
 
-function RecipePhoto({ recipe, compact = false, label }: { recipe: Recipe; compact?: boolean; label: string }) {
-  const className = compact
-    ? "h-12 w-full rounded-md object-cover"
-    : "aspect-[16/10] w-full rounded-lg object-cover";
-
+function RecipePhoto({ recipe, label }: { recipe: Recipe; label: string }) {
   if (recipe.imageUrl) {
-    return <Image src={recipe.imageUrl} alt={recipe.titleJa} width={640} height={400} className={className} />;
+    return (
+      <div className="flex h-14 w-full items-center justify-center overflow-hidden rounded-md bg-[#fbf8f1]">
+        <img src={recipe.imageUrl} alt={recipe.titleJa} className="h-full w-full object-contain" loading="lazy" />
+      </div>
+    );
   }
 
   return (
-    <div
-      className={`flex items-center justify-center rounded-lg bg-gradient-to-br from-emerald-50 via-stone-50 to-amber-50 text-[10px] font-bold text-slate-400 ${
-        compact ? "h-12" : "aspect-[16/10]"
-      }`}
-    >
+    <div className="flex h-14 items-center justify-center rounded-md bg-gradient-to-br from-emerald-50 via-stone-50 to-amber-50 text-[10px] font-bold text-slate-400">
       {label}
     </div>
   );
@@ -487,7 +483,7 @@ function RecipeCard({
         isSelected ? "border-emerald-700 ring-2 ring-emerald-700" : "border-slate-200 shadow-sm shadow-slate-200"
       }`}
     >
-      <RecipePhoto recipe={recipe} compact label={photoLabel} />
+      <RecipePhoto recipe={recipe} label={photoLabel} />
       <p className="mt-1 line-clamp-2 min-h-7 text-[10px] font-bold leading-tight text-slate-900">{recipe.titleJa}</p>
       <p className="truncate text-[9px] font-semibold text-slate-500">{recipe.category}</p>
     </button>
@@ -510,7 +506,7 @@ function RecipesContent() {
   return (
     <div className="space-y-3 pb-4">
       <section className="overflow-x-auto p-0.5 scroll-px-1 scrollbar-hide">
-        <div className="flex w-max gap-2 pb-1">
+        <div className="grid w-max grid-flow-col grid-rows-2 auto-cols-[78px] gap-2 pb-1">
           {recipes.map((recipe) => (
             <RecipeCard
               key={recipe.id}
@@ -524,9 +520,7 @@ function RecipesContent() {
       </section>
 
       <section className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
-        <RecipePhoto recipe={selectedRecipe} label={t("recipes.photo")} />
-
-        <div className="mt-3 flex items-start justify-between gap-2">
+        <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <h2 className="text-lg font-bold leading-tight text-slate-950">{selectedRecipe.titleJa}</h2>
             <p className="mt-0.5 text-xs font-semibold text-slate-500">{selectedRecipe.titleEn}</p>
@@ -555,7 +549,7 @@ function RecipesContent() {
 
         <div className="mt-4 border-t border-slate-100 pt-4">
           <h3 className="text-sm font-bold text-slate-950">{t("recipes.steps")}</h3>
-          <ol className="mt-2 space-y-2">
+          <ol className="mt-2 list-none space-y-2">
             {selectedRecipe.steps.map((step, index) => (
               <li key={step} className="flex gap-2 text-sm leading-relaxed text-slate-600">
                 <span className="shrink-0 font-bold text-emerald-800">{index + 1}.</span>
