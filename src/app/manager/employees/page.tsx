@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import AppShell from "@/components/app-shell";
+import { demoEmployees } from "@/lib/demo-employees";
 import { useI18n } from "@/lib/i18n/use-i18n";
 
 type EmployeeFilter = "all" | "active" | "inactive" | "unlinked";
@@ -19,16 +20,16 @@ type Employee = {
 
 type EmployeeDraft = Omit<Employee, "id">;
 
-const initialEmployees: Employee[] = [
-  { id: 1, familyName: "山田", givenName: "花子", displayName: "山田", initials: "YH", active: true, lineUserId: "line_yamada", memo: "午前シフト中心" },
-  { id: 2, familyName: "佐藤", givenName: "健", displayName: "佐藤", initials: "SK", active: true, lineUserId: "line_sato", memo: "" },
-  { id: 3, familyName: "鈴木", givenName: "愛", displayName: "鈴木", initials: "SA", active: true, lineUserId: "", memo: "" },
-  { id: 4, familyName: "伊藤", givenName: "翔", displayName: "伊藤", initials: "IS", active: true, lineUserId: "line_ito", memo: "" },
-  { id: 5, familyName: "高橋", givenName: "美咲", displayName: "高橋", initials: "TM", active: false, lineUserId: "", memo: "" },
-  { id: 6, familyName: "田中", givenName: "優", displayName: "田中", initials: "TY", active: true, lineUserId: "line_tanaka", memo: "" },
-  { id: 7, familyName: "中村", givenName: "蓮", displayName: "中村", initials: "NR", active: true, lineUserId: "line_nakamura", memo: "" },
-  { id: 8, familyName: "小林", givenName: "杏", displayName: "小林", initials: "KA", active: true, lineUserId: "", memo: "" },
-];
+const initialEmployees: Employee[] = demoEmployees.map((employee, index) => ({
+  id: index + 1,
+  familyName: employee.name,
+  givenName: "",
+  displayName: employee.name,
+  initials: employee.initials,
+  active: employee.active,
+  lineUserId: employee.lineUserId,
+  memo: employee.memo,
+}));
 
 const emptyDraft: EmployeeDraft = {
   familyName: "",

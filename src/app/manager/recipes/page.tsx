@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import AppShell from "@/components/app-shell";
+import { demoRecipes } from "@/app/recipes/page";
 import { useI18n } from "@/lib/i18n/use-i18n";
 
 type RecipeFilter = "all" | "active" | "draft";
@@ -12,6 +13,7 @@ type Recipe = {
   category: string;
   description: string;
   photoMemo: string;
+  imageUrl?: string;
   ingredients: string;
   steps: string;
   notes: string;
@@ -20,53 +22,16 @@ type Recipe = {
 
 type RecipeDraft = Omit<Recipe, "id">;
 
-const menuRecipeItems = [
-  ["抹茶ラテ", "Ceremonia"],
-  ["サクラ抹茶ラテフロート", "Ceremonia"],
-  ["ピュア抹茶", "Ceremonia"],
-  ["ストロベリー抹茶ラテ", "Ceremonia"],
-  ["ゴールドパウダー抹茶ラテ", "Ceremonia"],
-  ["マンゴー抹茶ラテ", "Summer Special"],
-  ["ラズベリー＆パッションフルーツ抹茶ラテ", "Summer Special"],
-  ["抹茶クラウド ココナッツウォーター", "Summer Special"],
-  ["抹茶ソーダ", "Summer Special"],
-  ["抹茶ソーダフロート", "Summer Special"],
-  ["サクラ抹茶ラテ ココナッツフロート", "Summer Special"],
-  ["ほうじ茶ラテ", "Hojicha"],
-  ["ピュアほうじ茶", "Hojicha"],
-  ["ほうじ茶チョコラテ", "Hojicha"],
-  ["ストロベリーほうじ茶チョコラテ", "Hojicha"],
-  ["コーヒー", "Coffee & Other"],
-  ["エスプレッソ", "Coffee & Other"],
-  ["カフェラテ", "Coffee & Other"],
-  ["オレンジジュース", "Coffee & Other"],
-  ["ストロベリーミルク", "Coffee & Other"],
-  ["ジャスミンティー", "Coffee & Other"],
-  ["フルーツソーダ", "Coffee & Other"],
-  ["生ビール", "Coffee & Other"],
-  ["抹茶アイス", "Ice Cream"],
-  ["バニラアイス", "Ice Cream"],
-  ["ココナッツミルクアイス", "Ice Cream"],
-  ["ソイアイス", "Ice Cream"],
-  ["豆と茶セット", "Japanese Sweets"],
-  ["お団子セット", "Japanese Sweets"],
-  ["わらび餅", "Japanese Sweets"],
-  ["Oat Milk", "Option"],
-  ["Soy Milk", "Option"],
-  ["Almond Milk", "Option"],
-  ["Coconut Milk", "Option"],
-  ["Ice Cream Option", "Option"],
-] satisfies [string, string][];
-
-const initialRecipes: Recipe[] = menuRecipeItems.map(([title, category], index) => ({
+const initialRecipes: Recipe[] = demoRecipes.map((recipe, index) => ({
   id: index + 1,
-  title,
-  category,
-  description: `${title}のスタッフ用デモレシピ。`,
-  photoMemo: "",
-  ingredients: "材料は公式レシピに合わせて更新してください",
-  steps: "カップを準備します\n材料を計量します\n仕上がりを確認して提供します",
-  notes: "デモデータです",
+  title: recipe.titleJa,
+  category: recipe.category,
+  description: recipe.descriptionJa,
+  photoMemo: recipe.imageUrl ?? "",
+  imageUrl: recipe.imageUrl,
+  ingredients: recipe.ingredients.join("\n"),
+  steps: recipe.steps.join("\n"),
+  notes: recipe.notes?.join("\n") ?? recipe.prepLiquid?.join("\n") ?? "",
   active: true,
 }));
 
@@ -75,6 +40,7 @@ const emptyDraft: RecipeDraft = {
   category: "",
   description: "",
   photoMemo: "",
+  imageUrl: undefined,
   ingredients: "",
   steps: "",
   notes: "",
@@ -229,7 +195,11 @@ function ManagerRecipesContent() {
               <article key={recipe.id} className="rounded-2xl border border-amber-100 bg-amber-50/70 p-3 shadow-sm sm:p-4">
                 <div className="flex gap-3">
                   <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-amber-200 bg-white text-xs font-semibold text-amber-800">
-                    {t("managerRecipes.photo")}
+                    {recipe.imageUrl ? (
+                      <img src={recipe.imageUrl} alt={recipe.title} className="h-full w-full rounded-xl object-contain" loading="lazy" />
+                    ) : (
+                      t("managerRecipes.photo")
+                    )}
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">

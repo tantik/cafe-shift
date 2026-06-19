@@ -2,14 +2,10 @@
 
 import { useMemo, useRef, useState, type WheelEvent } from "react";
 import AppShell from "@/components/app-shell";
+import { demoEmployees } from "@/lib/demo-employees";
 import { useI18n } from "@/lib/i18n/use-i18n";
 
 type ShiftCode = "shift_1" | "shift_2" | "shift_3" | "full_day" | "store_closed" | "vacation" | "none";
-
-type Employee = {
-  id: string;
-  name: string;
-};
 
 type Day = {
   key: string;
@@ -35,23 +31,7 @@ type SelectedCell = {
 
 const todayKey = "2026-06-19";
 
-const employees: Employee[] = [
-  { id: "manabu", name: "まなぶ" },
-  { id: "ly", name: "LY" },
-  { id: "yuko", name: "ゆうこ" },
-  { id: "seira", name: "せいら" },
-  { id: "asako", name: "あさこ" },
-  { id: "my_ha", name: "My Ha" },
-  { id: "hyori", name: "Hyori" },
-  { id: "bui", name: "Bui" },
-  { id: "olha", name: "Olha" },
-  { id: "grace", name: "Grace" },
-  { id: "cons", name: "Cons" },
-  { id: "bao", name: "Bao" },
-  { id: "gyu", name: "GYU" },
-  { id: "estany", name: "Estany" },
-  { id: "maria", name: "Maria" },
-];
+const employees = demoEmployees;
 
 const weekdays = ["月", "火", "水", "木", "金", "土", "日"];
 const weekStarts = [1, 8, 15, 22, 29];
@@ -210,6 +190,7 @@ function ManagerContent() {
   const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
   const wheelLockRef = useRef(false);
   const selectedWeek = weeks[selectedWeekIndex];
+  const currentWeekIndex = weeks.findIndex((week) => week.days.some((day) => day.key === todayKey));
 
   const selectedEmployee = selectedCell ? employees.find((employee) => employee.id === selectedCell.employeeId) : undefined;
   const selectedDay = selectedCell ? selectedWeek.days.find((day) => day.key === selectedCell.dayKey) : undefined;
@@ -277,6 +258,12 @@ function ManagerContent() {
     setSelectedWeekIndex((current) => Math.min(weeks.length - 1, Math.max(0, current + direction)));
   }
 
+  function goToToday() {
+    if (currentWeekIndex >= 0) {
+      setSelectedWeekIndex(currentWeekIndex);
+    }
+  }
+
   function handleCalendarWheel(event: WheelEvent<HTMLDivElement>) {
     const horizontalDelta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.shiftKey ? event.deltaY : 0;
     if (Math.abs(horizontalDelta) < 24 || wheelLockRef.current) {
@@ -312,7 +299,7 @@ function ManagerContent() {
     <div className="space-y-3 pb-2">
       <section className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
         <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-1.5">
+          <div className="grid grid-cols-[1fr_auto_auto_1fr] items-center gap-1.5">
             <button
               type="button"
               onClick={() => changeWeek(-1)}
@@ -322,6 +309,13 @@ function ManagerContent() {
               {t("manager.previousWeek")}
             </button>
             <span className="min-w-[116px] text-center text-xs font-bold text-slate-950">{selectedWeek.range}</span>
+            <button
+              type="button"
+              onClick={goToToday}
+              className="cursor-pointer rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-2 text-[11px] font-bold text-emerald-800 shadow-sm"
+            >
+              {t("manager.today")}
+            </button>
             <button
               type="button"
               onClick={() => changeWeek(1)}
@@ -359,8 +353,14 @@ function ManagerContent() {
                 </th>
                 {selectedWeek.days.map((day, index) => {
                   const isMonthStart = index > 0 && day.month !== selectedWeek.days[index - 1].month;
+                  const isToday = day.key === todayKey;
                   return (
-                  <th key={day.key} className={`border-b border-r border-slate-200 bg-white px-0.5 py-1 text-[9px] font-bold text-slate-600 sm:text-[10px] ${isMonthStart ? "border-l-4 border-l-rose-500 bg-rose-50" : ""}`}>
+                  <th
+                    key={day.key}
+                    className={`border-b border-r border-slate-200 px-0.5 py-1 text-[9px] font-bold sm:text-[10px] ${
+                      isToday ? "bg-emerald-500 text-white ring-2 ring-emerald-700 ring-inset" : "bg-white text-slate-600"
+                    } ${isMonthStart ? "border-l-4 border-l-rose-500 bg-rose-50" : ""}`}
+                  >
                     <span className="block">{day.date}</span>
                     <span className="block text-[9px]">{day.weekday}</span>
                   </th>

@@ -61,7 +61,7 @@ function simpleSteps(base: string, finish: string) {
 
 // Demo recipe steps. Replace with official store recipes before production.
 // Demo image path. In production, recipe photos will come from uploaded images / storage.
-const recipes: Recipe[] = [
+export const demoRecipes: Recipe[] = [
   {
     id: "ceremonia-matcha-latte",
     titleJa: "抹茶ラテ",
@@ -500,14 +500,14 @@ export default function RecipesPage() {
 
 function RecipesContent() {
   const { t } = useI18n();
-  const [selectedRecipeId, setSelectedRecipeId] = useState(recipes[0].id);
-  const selectedRecipe = recipes.find((recipe) => recipe.id === selectedRecipeId) ?? recipes[0];
+  const [selectedRecipeId, setSelectedRecipeId] = useState(demoRecipes[0].id);
+  const selectedRecipe = demoRecipes.find((recipe) => recipe.id === selectedRecipeId) ?? demoRecipes[0];
 
   return (
     <div className="space-y-3 pb-4">
       <section className="overflow-x-auto p-0.5 scroll-px-1 scrollbar-hide">
         <div className="grid w-max grid-flow-col grid-rows-2 auto-cols-[78px] gap-2 pb-1">
-          {recipes.map((recipe) => (
+          {demoRecipes.map((recipe) => (
             <RecipeCard
               key={recipe.id}
               recipe={recipe}
