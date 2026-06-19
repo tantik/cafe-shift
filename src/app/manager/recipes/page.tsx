@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import AppShell from "@/components/app-shell";
-import { demoRecipes } from "@/app/recipes/page";
+import { demoRecipes } from "@/lib/demo-recipes";
 import { useI18n } from "@/lib/i18n/use-i18n";
 
 type RecipeFilter = "all" | "active" | "draft";
@@ -73,6 +73,15 @@ function ManagerRecipesContent() {
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [draft, setDraft] = useState<RecipeDraft>(emptyDraft);
+  const objectUrlsRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    const objectUrls = objectUrlsRef.current;
+    return () => {
+      objectUrls.forEach((url) => URL.revokeObjectURL(url));
+      objectUrls.clear();
+    };
+  }, []);
 
   const visibleRecipes = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -108,6 +117,16 @@ function ManagerRecipesContent() {
 
   function updateDraft<K extends keyof RecipeDraft>(field: K, value: RecipeDraft[K]) {
     setDraft((current) => ({ ...current, [field]: value }));
+  }
+
+  function updateDraftImage(file: File | undefined) {
+    if (!file) {
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(file);
+    objectUrlsRef.current.add(objectUrl);
+    setDraft((current) => ({ ...current, imageUrl: objectUrl, photoMemo: file.name }));
   }
 
   function saveRecipe() {
@@ -292,12 +311,17 @@ function ManagerRecipesContent() {
               <label className="block text-sm font-medium text-slate-700">
                 {t("managerRecipes.fields.photoMemo")}
                 <input
-                  value={draft.photoMemo}
-                  onChange={(event) => updateDraft("photoMemo", event.target.value)}
-                  placeholder={t("managerRecipes.placeholders.photoMemo")}
-                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-emerald-600"
+                  type="file"
+                  accept="image/*"
+                  onChange={(event) => updateDraftImage(event.target.files?.[0])}
+                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none file:mr-3 file:rounded-lg file:border-0 file:bg-emerald-50 file:px-3 file:py-1.5 file:text-sm file:font-bold file:text-emerald-800 focus:border-emerald-600"
                 />
               </label>
+              {draft.imageUrl ? (
+                <div className="h-32 overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+                  <img src={draft.imageUrl} alt={draft.title || t("managerRecipes.photo")} className="h-full w-full object-contain" />
+                </div>
+              ) : null}
               <label className="block text-sm font-medium text-slate-700">
                 {t("managerRecipes.fields.ingredients")}
                 <textarea

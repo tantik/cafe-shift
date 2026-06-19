@@ -4,39 +4,84 @@ import { useState } from "react";
 import AppShell from "@/components/app-shell";
 import { useI18n } from "@/lib/i18n/use-i18n";
 
+type ShiftColor =
+  | "blue"
+  | "salmon"
+  | "yellow"
+  | "emerald"
+  | "violet"
+  | "sky"
+  | "teal"
+  | "rose"
+  | "amber"
+  | "indigo"
+  | "lime"
+  | "pink"
+  | "cyan"
+  | "fuchsia"
+  | "stone"
+  | "purple"
+  | "orange";
+
 type ShiftSetting = {
   id: number;
   label: string;
   startTime: string;
   endTime: string;
-  color: "blue" | "terracotta" | "yellow" | "green" | "slate";
+  color: ShiftColor;
 };
 
 const periodPresets = [1, 10, 16, 21];
 
 const initialShiftSettings: ShiftSetting[] = [
   { id: 1, label: "1", startTime: "08:30", endTime: "13:00", color: "blue" },
-  { id: 2, label: "2", startTime: "13:00", endTime: "17:30", color: "terracotta" },
+  { id: 2, label: "2", startTime: "13:00", endTime: "17:30", color: "salmon" },
   { id: 3, label: "3", startTime: "08:30", endTime: "10:00", color: "yellow" },
-  { id: 4, label: "通", startTime: "08:30", endTime: "17:30", color: "green" },
+  { id: 4, label: "通", startTime: "08:30", endTime: "17:30", color: "emerald" },
 ];
 
-const colorPresets: ShiftSetting["color"][] = ["blue", "terracotta", "yellow", "green", "slate"];
+const colorPresets: ShiftColor[] = [
+  "blue",
+  "salmon",
+  "yellow",
+  "emerald",
+  "violet",
+  "sky",
+  "teal",
+  "rose",
+  "amber",
+  "indigo",
+  "lime",
+  "pink",
+  "cyan",
+  "fuchsia",
+  "stone",
+  "purple",
+  "orange",
+];
 
-function shiftColorClass(color: ShiftSetting["color"]) {
-  if (color === "blue") {
-    return "border-sky-200 bg-sky-50 text-sky-800";
-  }
-  if (color === "terracotta") {
-    return "border-orange-200 bg-orange-50 text-orange-800";
-  }
-  if (color === "yellow") {
-    return "border-yellow-200 bg-yellow-50 text-yellow-800";
-  }
-  if (color === "green") {
-    return "border-emerald-200 bg-emerald-50 text-emerald-800";
-  }
-  return "border-slate-200 bg-slate-50 text-slate-700";
+const shiftColorStyles: Record<ShiftColor, string> = {
+  blue: "border-blue-200 bg-blue-50 text-blue-800",
+  salmon: "border-orange-200 bg-orange-50 text-orange-800",
+  yellow: "border-yellow-200 bg-yellow-50 text-yellow-800",
+  emerald: "border-emerald-200 bg-emerald-50 text-emerald-800",
+  violet: "border-violet-200 bg-violet-50 text-violet-800",
+  sky: "border-sky-200 bg-sky-50 text-sky-800",
+  teal: "border-teal-200 bg-teal-50 text-teal-800",
+  rose: "border-rose-200 bg-rose-50 text-rose-800",
+  amber: "border-amber-200 bg-amber-50 text-amber-800",
+  indigo: "border-indigo-200 bg-indigo-50 text-indigo-800",
+  lime: "border-lime-200 bg-lime-50 text-lime-800",
+  pink: "border-pink-200 bg-pink-50 text-pink-800",
+  cyan: "border-cyan-200 bg-cyan-50 text-cyan-800",
+  fuchsia: "border-fuchsia-200 bg-fuchsia-50 text-fuchsia-800",
+  stone: "border-stone-200 bg-stone-50 text-stone-800",
+  purple: "border-purple-200 bg-purple-50 text-purple-800",
+  orange: "border-orange-300 bg-orange-100 text-orange-900",
+};
+
+function shiftColorClass(color: ShiftColor) {
+  return shiftColorStyles[color];
 }
 
 function formatPeriodExample(day: number, t: (key: string) => string) {
@@ -74,7 +119,8 @@ function ManagerSettingsContent() {
 
   function addShiftSetting() {
     const nextId = shiftSettings.reduce((max, shift) => Math.max(max, shift.id), 0) + 1;
-    const color = colorPresets[(nextId - 1) % colorPresets.length];
+    const usedColors = new Set(shiftSettings.map((shift) => shift.color));
+    const color = colorPresets.find((preset) => !usedColors.has(preset)) ?? colorPresets[(nextId - 1) % colorPresets.length];
     setShiftSettings((current) => [...current, { id: nextId, label: String(nextId), startTime: "10:00", endTime: "14:00", color }]);
   }
 

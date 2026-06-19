@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import LanguageSwitcher from "@/components/language-switcher";
+import ManagerBackLink from "@/components/manager-back-link";
 import ManagerNav from "@/components/manager-nav";
 import MobileNav from "@/components/mobile-nav";
 import { I18nProvider } from "@/lib/i18n/use-i18n";
@@ -42,6 +43,7 @@ export default function AppShell({
               <LanguageSwitcher />
             </div>
           </header>
+          {!showMobileNav ? <ManagerBackLink /> : null}
           <main className="flex-1">{children}</main>
           {!showMobileNav ? <ManagerNav /> : null}
           {showMobileNav ? <MobileNav /> : null}

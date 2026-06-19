@@ -190,7 +190,7 @@ function ManagerEmployeesContent() {
           </div>
         </section>
 
-        <section className="space-y-2.5">
+        <section className="space-y-2">
           <div className="flex items-center justify-between">
             <h2 className="font-semibold text-slate-900">{t("managerEmployees.staffListTitle")}</h2>
             <p className="text-sm text-slate-500">{visibleEmployees.length}{t("managerEmployees.peopleSuffix")}</p>
@@ -202,36 +202,34 @@ function ManagerEmployeesContent() {
             </p>
           ) : (
             visibleEmployees.map((employee) => (
-              <article key={employee.id} className="rounded-xl border border-amber-100 bg-amber-50/70 p-3 shadow-sm">
-                <div className="flex gap-3">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-900 text-xs font-bold text-white">
-                    {employee.initials}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="font-semibold text-slate-900">{employee.displayName}</p>
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                          employee.active ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-700"
-                        }`}
-                      >
-                        {employee.active ? t("managerEmployees.status.active") : t("managerEmployees.status.inactive")}
-                      </span>
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                          employee.lineUserId ? "bg-sky-100 text-sky-800" : "bg-amber-100 text-amber-800"
-                        }`}
-                      >
-                        {employee.lineUserId ? t("managerEmployees.line.linked") : t("managerEmployees.line.unlinked")}
-                      </span>
+              <article key={employee.id} className="rounded-lg border border-amber-100 bg-amber-50/70 p-2 shadow-sm">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                  <div className="flex min-w-0 flex-1 items-center gap-2">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-900 text-[11px] font-bold text-white">
+                      {employee.initials}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <p className="font-semibold leading-tight text-slate-900">{employee.displayName}</p>
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                            employee.active ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-700"
+                          }`}
+                        >
+                          {employee.active ? t("managerEmployees.status.active") : t("managerEmployees.status.inactive")}
+                        </span>
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                            employee.lineUserId ? "bg-sky-100 text-sky-800" : "bg-amber-100 text-amber-800"
+                          }`}
+                        >
+                          {employee.lineUserId ? t("managerEmployees.line.linked") : t("managerEmployees.line.unlinked")}
+                        </span>
+                      </div>
+                      {employee.memo ? <p className="mt-0.5 truncate text-xs text-slate-500">{t("managerEmployees.memo")}: {employee.memo}</p> : null}
                     </div>
-                    <p className="mt-0.5 text-sm text-slate-600">
-                      {employee.familyName} {employee.givenName}
-                    </p>
-                    {employee.memo ? <p className="mt-1 text-xs text-slate-500">{t("managerEmployees.memo")}: {employee.memo}</p> : null}
                   </div>
-                </div>
-                <div className="mt-2.5 flex justify-end gap-2">
+                  <div className="flex shrink-0 justify-end gap-2">
                   <button
                     type="button"
                     onClick={() => openEditEditor(employee)}
@@ -246,6 +244,7 @@ function ManagerEmployeesContent() {
                   >
                     {employee.active ? t("managerEmployees.deactivate") : t("managerEmployees.activate")}
                   </button>
+                  </div>
                 </div>
               </article>
             ))
