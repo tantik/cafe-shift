@@ -204,52 +204,54 @@ function ManagerRecipesContent() {
           </div>
         </section>
 
-        <section className="space-y-3">
+        <section className="space-y-2">
           {visibleRecipes.length === 0 ? (
             <div className="rounded-2xl border border-slate-200 bg-white p-5 text-center text-sm text-slate-500 shadow-sm">
               {t("managerRecipes.emptyText")}
             </div>
           ) : (
             visibleRecipes.map((recipe) => (
-              <article key={recipe.id} className="rounded-2xl border border-amber-100 bg-amber-50/70 p-3 shadow-sm sm:p-4">
-                <div className="flex gap-3">
-                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-amber-200 bg-white text-xs font-semibold text-amber-800">
-                    {recipe.imageUrl ? (
-                      <img src={recipe.imageUrl} alt={recipe.title} className="h-full w-full rounded-xl object-contain" loading="lazy" />
-                    ) : (
-                      t("managerRecipes.photo")
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h2 className="font-semibold text-slate-900">{recipe.title}</h2>
-                      <span className="rounded-full bg-white px-2 py-0.5 text-xs text-slate-600">{recipe.category}</span>
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-                          recipe.active ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"
-                        }`}
-                      >
-                        {statusLabel(recipe.active, t)}
-                      </span>
+              <article key={recipe.id} className="rounded-lg border border-amber-100 bg-amber-50/70 p-2 shadow-sm">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                  <div className="flex min-w-0 flex-1 items-center gap-2">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-amber-200 bg-white text-[11px] font-semibold text-amber-800">
+                      {recipe.imageUrl ? (
+                        <img src={recipe.imageUrl} alt={recipe.title} className="h-full w-full rounded-lg object-contain" loading="lazy" />
+                      ) : (
+                        t("managerRecipes.photo")
+                      )}
                     </div>
-                    <p className="mt-1 text-sm text-slate-600">{recipe.description || t("managerRecipes.noDescription")}</p>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <h2 className="font-semibold leading-tight text-slate-900">{recipe.title}</h2>
+                        <span className="rounded-full bg-white px-2 py-0.5 text-[11px] text-slate-600">{recipe.category}</span>
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                            recipe.active ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"
+                          }`}
+                        >
+                          {statusLabel(recipe.active, t)}
+                        </span>
+                      </div>
+                      <p className="mt-0.5 line-clamp-1 text-xs text-slate-600">{recipe.description || t("managerRecipes.noDescription")}</p>
+                    </div>
                   </div>
-                </div>
-                <div className="mt-3 flex flex-wrap justify-end gap-2">
-                  <button
-                    type="button"
-                    onClick={() => openEditEditor(recipe)}
-                    className="rounded-lg border border-emerald-200 bg-white px-3 py-1.5 text-sm font-semibold text-emerald-800"
-                  >
-                    {t("managerRecipes.edit")}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => deleteRecipe(recipe.id)}
-                    className="rounded-lg border border-rose-200 bg-white px-3 py-1.5 text-sm font-semibold text-rose-700"
-                  >
-                    {t("manager.deleteRecipe")}
-                  </button>
+                  <div className="flex shrink-0 justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => openEditEditor(recipe)}
+                      className="rounded-lg border border-emerald-200 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-800"
+                    >
+                      {t("managerRecipes.edit")}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => deleteRecipe(recipe.id)}
+                      className="rounded-lg border border-rose-200 bg-white px-3 py-1.5 text-xs font-semibold text-rose-700"
+                    >
+                      {t("manager.deleteRecipe")}
+                    </button>
+                  </div>
                 </div>
               </article>
             ))

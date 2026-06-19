@@ -115,15 +115,20 @@ const reports: WorkReport[] = [
 ];
 
 function buildInitialSchedule() {
-  const pattern: ShiftCode[] = ["shift_1", "shift_2", "shift_3", "full_day", "none", "store_closed", "vacation"];
+  const pattern: ShiftCode[] = ["shift_1", "shift_2", "full_day", "none", "vacation", "store_closed", "shift_1", "full_day", "shift_2", "none"];
   return Object.fromEntries(
     employees.map((employee, employeeIndex) => [
       employee.id,
       Object.fromEntries(
-        weeks.flatMap((week) => week.days).map((day, dayIndex) => {
-          const shift = pattern[(employeeIndex + dayIndex * 2) % pattern.length];
-          return [day.key, shift];
-        }),
+        weeks.flatMap((week, weekIndex) =>
+          week.days.map((day, dayIndex) => {
+            if (employee.id === "cons") {
+              return [day.key, dayIndex < 5 ? "shift_3" : "none"];
+            }
+            const shift = pattern[(employeeIndex * 3 + weekIndex * 4 + dayIndex * 2) % pattern.length];
+            return [day.key, shift];
+          }),
+        ),
       ),
     ]),
   ) as Record<string, Record<string, ShiftCode>>;
@@ -152,14 +157,19 @@ function formatHours(hours: number) {
 // Demo auto-generation. Production should consider staffing rules, max hours, vacations, fairness, and required headcount.
 function buildDraftFromRequests(current: Record<string, Record<string, ShiftCode>>, excludedEmployeeIds: string[] = []) {
   const next = structuredClone(current);
-  const draftPattern: ShiftCode[] = ["shift_1", "shift_2", "none", "full_day", "vacation", "shift_3", "none"];
-  for (const employee of employees) {
+  const draftPattern: ShiftCode[] = ["shift_1", "shift_2", "none", "full_day", "vacation", "store_closed", "shift_1", "full_day", "shift_2"];
+  for (const [employeeIndex, employee] of employees.entries()) {
     if (excludedEmployeeIds.includes(employee.id)) {
       continue;
     }
-    for (const week of weeks) {
-      for (const day of week.days) {
-        next[employee.id][day.key] = draftPattern[(employees.indexOf(employee) + Number(day.key.slice(-2))) % draftPattern.length];
+    for (const [weekIndex, week] of weeks.entries()) {
+      for (const [dayIndex, day] of week.days.entries()) {
+        next[employee.id][day.key] =
+          employee.id === "cons"
+            ? dayIndex < 5
+              ? "shift_3"
+              : "none"
+            : draftPattern[(employeeIndex * 2 + weekIndex * 3 + dayIndex) % draftPattern.length];
       }
     }
   }
@@ -198,6 +208,8 @@ function ManagerContent() {
   const selectedIsPast = selectedCell ? selectedCell.dayKey < todayKey : false;
   const selectedIsReportOnly = selectedIsPast || Boolean(selectedReport);
   const missingRequestEmployees = employees.filter((employee) => missingRequestEmployeeIds.includes(employee.id));
+  const selectedEditableShiftCodes =
+    selectedEmployee?.id === "cons" ? editableShiftCodes : editableShiftCodes.filter((code) => code !== "shift_3");
 
   const weekRows = useMemo(
     () =>
@@ -457,7 +469,7 @@ function ManagerContent() {
                 <div className="mt-4">
                   <p className="text-xs font-bold text-slate-700">{t("manager.shiftEdit")}</p>
                   <div className="mt-2 grid grid-cols-4 gap-1.5">
-                    {editableShiftCodes.map((code) => (
+                    {selectedEditableShiftCodes.map((code) => (
                       <button
                         key={code}
                         type="button"

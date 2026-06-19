@@ -8,7 +8,7 @@ export default function ManagerBackLink() {
   const pathname = usePathname();
   const { t } = useI18n();
 
-  if (pathname === "/manager" || !pathname.startsWith("/manager/")) {
+  if (pathname === "/manager" || pathname === "/manager/employees" || !pathname.startsWith("/manager/")) {
     return null;
   }
 
