@@ -17,7 +17,7 @@ type I18nContextValue = {
 const I18nContext = createContext<I18nContextValue | null>(null);
 
 function isAppLanguage(value: string | null): value is AppLanguage {
-  return value === "ja" || value === "en" || value === "ru";
+  return value === "ja" || value === "en";
 }
 
 function getStoredLanguage(): AppLanguage {

@@ -3,11 +3,10 @@
 import { useI18n } from "@/lib/i18n/use-i18n";
 import type { AppLanguage } from "@/lib/i18n/types";
 
-const languageOptions: AppLanguage[] = ["ja", "en", "ru"];
+const languageOptions: AppLanguage[] = ["ja", "en"];
 const shortLabels: Record<AppLanguage, string> = {
   ja: "JA",
   en: "EN",
-  ru: "RU",
 };
 
 export default function LanguageSwitcher() {

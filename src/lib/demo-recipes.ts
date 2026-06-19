@@ -12,14 +12,23 @@ export type DemoRecipe = {
   id: string;
   titleJa: string;
   titleEn: string;
+  titleJaHash?: string;
   category: RecipeCategory;
   badge?: string;
   imageUrl?: string;
   descriptionJa: string;
+  descriptionEn?: string;
+  descriptionJaHash?: string;
   ingredients: string[];
+  ingredientsEn?: string[];
+  ingredientsJaHash?: string;
   steps: string[];
+  stepsEn?: string[];
+  stepsJaHash?: string;
   prepLiquid?: string[];
   notes?: string[];
+  notesEn?: string[];
+  notesJaHash?: string;
 };
 
 const matchaLiquid = [

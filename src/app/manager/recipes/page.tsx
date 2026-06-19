@@ -4,11 +4,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import AppShell from "@/components/app-shell";
 import { demoRecipes } from "@/lib/demo-recipes";
 import { useI18n } from "@/lib/i18n/use-i18n";
+import { createTranslationSignature, hasTranslationChanged } from "@/lib/translation-cache";
 
 type RecipeFilter = "all" | "active" | "draft";
 
 type Recipe = {
   id: number;
+  // Display/Edit (Japanese only for manager)
   title: string;
   category: string;
   description: string;
@@ -18,12 +20,25 @@ type Recipe = {
   steps: string;
   notes: string;
   active: boolean;
+  
+  // Hidden storage for translations
+  titleEn: string;
+  titleJaHash?: string;
+  descriptionEn: string;
+  descriptionJaHash?: string;
+  ingredientsEn: string;
+  ingredientsJaHash?: string;
+  stepsEn: string;
+  stepsJaHash?: string;
+  notesEn: string;
+  notesJaHash?: string;
 };
 
 type RecipeDraft = Omit<Recipe, "id">;
 
 const initialRecipes: Recipe[] = demoRecipes.map((recipe, index) => ({
   id: index + 1,
+  // Display fields
   title: recipe.titleJa,
   category: recipe.category,
   description: recipe.descriptionJa,
@@ -33,6 +48,18 @@ const initialRecipes: Recipe[] = demoRecipes.map((recipe, index) => ({
   steps: recipe.steps.join("\n"),
   notes: recipe.notes?.join("\n") ?? recipe.prepLiquid?.join("\n") ?? "",
   active: true,
+  
+  // Hidden translations
+  titleEn: recipe.titleEn,
+  titleJaHash: recipe.titleJaHash,
+  descriptionEn: recipe.descriptionEn || "",
+  descriptionJaHash: recipe.descriptionJaHash,
+  ingredientsEn: recipe.ingredientsEn?.join("\n") || "",
+  ingredientsJaHash: recipe.ingredientsJaHash,
+  stepsEn: recipe.stepsEn?.join("\n") || "",
+  stepsJaHash: recipe.stepsJaHash,
+  notesEn: recipe.notesEn?.join("\n") || "",
+  notesJaHash: recipe.notesJaHash,
 }));
 
 const emptyDraft: RecipeDraft = {
@@ -45,6 +72,18 @@ const emptyDraft: RecipeDraft = {
   steps: "",
   notes: "",
   active: true,
+  
+  // Hidden translations
+  titleEn: "",
+  titleJaHash: undefined,
+  descriptionEn: "",
+  descriptionJaHash: undefined,
+  ingredientsEn: "",
+  ingredientsJaHash: undefined,
+  stepsEn: "",
+  stepsJaHash: undefined,
+  notesEn: "",
+  notesJaHash: undefined,
 };
 
 const filters: { id: RecipeFilter; labelKey: string }[] = [
@@ -73,6 +112,8 @@ function ManagerRecipesContent() {
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [draft, setDraft] = useState<RecipeDraft>(emptyDraft);
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [translationError, setTranslationError] = useState<string | null>(null);
   const objectUrlsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
@@ -129,11 +170,136 @@ function ManagerRecipesContent() {
     setDraft((current) => ({ ...current, imageUrl: objectUrl, photoMemo: file.name }));
   }
 
-  function saveRecipe() {
+  async function autoTranslateRecipe() {
+    setIsTranslating(true);
+    setTranslationError(null);
+
+    try {
+      // Determine which fields need translation
+      const fieldsToTranslate: Record<string, string | string[]> = {};
+      
+      if (hasTranslationChanged(draft.title, draft.titleJaHash)) {
+        fieldsToTranslate.title = draft.title;
+      }
+      if (hasTranslationChanged(draft.description, draft.descriptionJaHash)) {
+        fieldsToTranslate.description = draft.description;
+      }
+      if (hasTranslationChanged(draft.ingredients.split("\n").filter((line) => line.trim()), draft.ingredientsJaHash)) {
+        fieldsToTranslate.ingredients = draft.ingredients.split("\n").filter((line) => line.trim());
+      }
+      if (hasTranslationChanged(draft.steps.split("\n").filter((line) => line.trim()), draft.stepsJaHash)) {
+        fieldsToTranslate.steps = draft.steps.split("\n").filter((line) => line.trim());
+      }
+
+      // If nothing changed and translation exists, skip
+      if (Object.keys(fieldsToTranslate).length === 0 && draft.titleEn) {
+        setTranslationError("No changes detected. English translation already exists.");
+        setIsTranslating(false);
+        return;
+      }
+
+      const response = await fetch("/api/translate-recipe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: draft.title,
+          description: draft.description,
+          ingredients: draft.ingredients.split("\n").filter((line) => line.trim()),
+          steps: draft.steps.split("\n").filter((line) => line.trim()),
+          points: [],
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        setTranslationError(data.error || "Translation failed. Please edit manually.");
+        setIsTranslating(false);
+        return;
+      }
+
+      const translations = await response.json();
+
+      setDraft((current) => ({
+        ...current,
+        titleEn: translations.titleEn || "",
+        titleJaHash: createTranslationSignature(current.title),
+        descriptionEn: translations.descriptionEn || "",
+        descriptionJaHash: createTranslationSignature(current.description),
+        ingredientsEn: translations.ingredientsEn?.join("\n") || "",
+        ingredientsJaHash: createTranslationSignature(current.ingredients.split("\n").filter((line) => line.trim())),
+        stepsEn: translations.stepsEn?.join("\n") || "",
+        stepsJaHash: createTranslationSignature(current.steps.split("\n").filter((line) => line.trim())),
+        notesEn: translations.pointsEn?.join("\n") || "",
+        notesJaHash: createTranslationSignature(current.notes.split("\n").filter((line) => line.trim())),
+      }));
+
+      setTranslationError(null);
+    } catch (error) {
+      console.error("Translation error:", error);
+      setTranslationError("Translation failed. Please edit manually.");
+    } finally {
+      setIsTranslating(false);
+    }
+  }
+
+  async function saveRecipe() {
     if (!draft.title.trim() || !draft.category.trim()) {
       return;
     }
 
+    // If no English translation yet, try to auto-translate
+    if (!draft.titleEn) {
+      setIsTranslating(true);
+      try {
+        const response = await fetch("/api/translate-recipe", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: draft.title,
+            description: draft.description,
+            ingredients: draft.ingredients.split("\n").filter((line) => line.trim()),
+            steps: draft.steps.split("\n").filter((line) => line.trim()),
+            points: [],
+          }),
+        });
+
+        if (response.ok) {
+          const translations = await response.json();
+          const updatedDraft = {
+            ...draft,
+            titleEn: translations.titleEn || "",
+            titleJaHash: createTranslationSignature(draft.title),
+            descriptionEn: translations.descriptionEn || "",
+            descriptionJaHash: createTranslationSignature(draft.description),
+            ingredientsEn: translations.ingredientsEn?.join("\n") || "",
+            ingredientsJaHash: createTranslationSignature(draft.ingredients.split("\n").filter((line) => line.trim())),
+            stepsEn: translations.stepsEn?.join("\n") || "",
+            stepsJaHash: createTranslationSignature(draft.steps.split("\n").filter((line) => line.trim())),
+            notesEn: translations.pointsEn?.join("\n") || "",
+            notesJaHash: createTranslationSignature(draft.notes.split("\n").filter((line) => line.trim())),
+          };
+
+          // Save with translations
+          if (editingId === null) {
+            const nextId = recipes.reduce((largest, recipe) => Math.max(largest, recipe.id), 0) + 1;
+            setRecipes((current) => [...current, { id: nextId, ...updatedDraft }]);
+          } else {
+            setRecipes((current) =>
+              current.map((recipe) => (recipe.id === editingId ? { id: editingId, ...updatedDraft } : recipe)),
+            );
+          }
+          setEditorOpen(false);
+          return;
+        }
+      } catch {
+        // Fallback: save without translation
+        console.warn("Auto-translation failed, saving recipe without English translation");
+      } finally {
+        setIsTranslating(false);
+      }
+    }
+
+    // Save recipe (with or without translation)
     if (editingId === null) {
       const nextId = recipes.reduce((largest, recipe) => Math.max(largest, recipe.id), 0) + 1;
       setRecipes((current) => [...current, { id: nextId, ...draft }]);
@@ -264,8 +430,8 @@ function ManagerRecipesContent() {
       </div>
 
       {editorOpen ? (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/35 p-3 sm:items-center">
-          <section className="max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-2xl border border-amber-100 bg-white p-4 shadow-xl sm:p-5">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/35 p-3 sm:items-center" onClick={closeEditor}>
+          <section className="max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-2xl border border-amber-100 bg-white p-4 shadow-xl sm:p-5" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs font-semibold text-emerald-700">{editingId === null ? t("managerRecipes.modal.newBadge") : t("managerRecipes.modal.editBadge")}</p>
@@ -282,15 +448,18 @@ function ManagerRecipesContent() {
               </span>
             </div>
 
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <div className="mt-4">
               <label className="text-sm font-medium text-slate-700">
-                {t("managerRecipes.fields.title")}
+                {t("managerRecipes.fields.title")} (日本語)
                 <input
                   value={draft.title}
                   onChange={(event) => updateDraft("title", event.target.value)}
                   className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-emerald-600"
                 />
               </label>
+            </div>
+
+            <div className="mt-3">
               <label className="text-sm font-medium text-slate-700">
                 {t("managerRecipes.fields.category")}
                 <input
@@ -303,7 +472,7 @@ function ManagerRecipesContent() {
 
             <div className="mt-3 space-y-3">
               <label className="block text-sm font-medium text-slate-700">
-                {t("managerRecipes.fields.description")}
+                {t("managerRecipes.fields.description")} (日本語)
                 <input
                   value={draft.description}
                   onChange={(event) => updateDraft("description", event.target.value)}
@@ -325,7 +494,7 @@ function ManagerRecipesContent() {
                 </div>
               ) : null}
               <label className="block text-sm font-medium text-slate-700">
-                {t("managerRecipes.fields.ingredients")}
+                {t("managerRecipes.fields.ingredients")} (日本語)
                 <textarea
                   value={draft.ingredients}
                   onChange={(event) => updateDraft("ingredients", event.target.value)}
@@ -335,7 +504,7 @@ function ManagerRecipesContent() {
                 />
               </label>
               <label className="block text-sm font-medium text-slate-700">
-                {t("managerRecipes.fields.steps")}
+                {t("managerRecipes.fields.steps")} (日本語)
                 <textarea
                   value={draft.steps}
                   onChange={(event) => updateDraft("steps", event.target.value)}
@@ -345,7 +514,7 @@ function ManagerRecipesContent() {
                 />
               </label>
               <label className="block text-sm font-medium text-slate-700">
-                {t("managerRecipes.fields.notes")}
+                {t("managerRecipes.fields.notes")} (日本語)
                 <textarea
                   value={draft.notes}
                   onChange={(event) => updateDraft("notes", event.target.value)}
@@ -353,6 +522,27 @@ function ManagerRecipesContent() {
                   className="mt-1 w-full resize-none rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-emerald-600"
                 />
               </label>
+
+              {translationError ? (
+                <div className="rounded-lg border border-rose-200 bg-rose-50 p-3">
+                  <p className="text-sm text-rose-700">{translationError}</p>
+                </div>
+              ) : null}
+
+              {draft.titleEn ? (
+                <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+                  <p className="text-sm text-emerald-700">✓ English translation is saved</p>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={autoTranslateRecipe}
+                  disabled={isTranslating || !draft.title.trim()}
+                  className="w-full rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-sm font-semibold text-blue-700 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isTranslating ? "Translating..." : "Translate to English"}
+                </button>
+              )}
             </div>
 
             <div className="mt-4">

@@ -56,9 +56,45 @@ export default function RecipesPage() {
 }
 
 function RecipesContent() {
-  const { t } = useI18n();
+  const { language, t } = useI18n();
   const [selectedRecipeId, setSelectedRecipeId] = useState(demoRecipes[0].id);
   const selectedRecipe = demoRecipes.find((recipe) => recipe.id === selectedRecipeId) ?? demoRecipes[0];
+
+  // Get locale-aware text with fallback to Japanese
+  const getTitle = () => {
+    if (language === "en" && selectedRecipe.titleEn) {
+      return selectedRecipe.titleEn;
+    }
+    return selectedRecipe.titleJa;
+  };
+
+  const getDescription = () => {
+    if (language === "en" && selectedRecipe.descriptionEn) {
+      return selectedRecipe.descriptionEn;
+    }
+    return selectedRecipe.descriptionJa;
+  };
+
+  const getIngredients = () => {
+    if (language === "en" && selectedRecipe.ingredientsEn && selectedRecipe.ingredientsEn.length > 0) {
+      return selectedRecipe.ingredientsEn;
+    }
+    return selectedRecipe.ingredients;
+  };
+
+  const getSteps = () => {
+    if (language === "en" && selectedRecipe.stepsEn && selectedRecipe.stepsEn.length > 0) {
+      return selectedRecipe.stepsEn;
+    }
+    return selectedRecipe.steps;
+  };
+
+  const getNotes = () => {
+    if (language === "en" && selectedRecipe.notesEn && selectedRecipe.notesEn.length > 0) {
+      return selectedRecipe.notesEn;
+    }
+    return selectedRecipe.notes;
+  };
 
   return (
     <div className="space-y-3 pb-4">
@@ -79,7 +115,7 @@ function RecipesContent() {
       <section className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <h2 className="text-lg font-bold leading-tight text-slate-950">{selectedRecipe.titleJa}</h2>
+            <h2 className="text-lg font-bold leading-tight text-slate-950">{getTitle()}</h2>
             <p className="mt-0.5 text-xs font-semibold text-slate-500">{selectedRecipe.titleEn}</p>
           </div>
           {selectedRecipe.badge ? (
@@ -90,12 +126,12 @@ function RecipesContent() {
         </div>
 
         <p className="mt-1 text-xs font-bold text-emerald-800">{selectedRecipe.category}</p>
-        <p className="mt-2 text-sm leading-relaxed text-slate-600">{selectedRecipe.descriptionJa}</p>
+        <p className="mt-2 text-sm leading-relaxed text-slate-600">{getDescription()}</p>
 
         <div className="mt-4 border-t border-slate-100 pt-4">
           <h3 className="text-sm font-bold text-slate-950">{t("recipes.ingredients")}</h3>
           <ul className="mt-2 grid grid-cols-1 gap-1.5">
-            {selectedRecipe.ingredients.map((ingredient) => (
+            {getIngredients().map((ingredient) => (
               <li key={ingredient} className="flex items-start gap-2 text-sm text-slate-600">
                 <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-700" />
                 <span>{ingredient}</span>
@@ -107,7 +143,7 @@ function RecipesContent() {
         <div className="mt-4 border-t border-slate-100 pt-4">
           <h3 className="text-sm font-bold text-slate-950">{t("recipes.steps")}</h3>
           <ol className="mt-2 list-none space-y-2">
-            {selectedRecipe.steps.map((step, index) => (
+            {getSteps().map((step, index) => (
               <li key={step} className="flex gap-2 text-sm leading-relaxed text-slate-600">
                 <span className="shrink-0 font-bold text-emerald-800">{index + 1}.</span>
                 <span>{step}</span>
@@ -116,13 +152,13 @@ function RecipesContent() {
           </ol>
         </div>
 
-        {selectedRecipe.prepLiquid || selectedRecipe.notes ? (
+        {selectedRecipe.prepLiquid || selectedRecipe.notes || selectedRecipe.notesEn ? (
           <div className="mt-4 rounded-lg bg-slate-50 p-3">
             <h3 className="text-sm font-bold text-slate-950">
               {selectedRecipe.prepLiquid ? t("recipes.matchaLiquid") : t("recipes.tips")}
             </h3>
             <div className="mt-2 space-y-1.5">
-              {(selectedRecipe.prepLiquid ?? selectedRecipe.notes ?? []).map((note) => (
+              {(selectedRecipe.prepLiquid ?? getNotes() ?? []).map((note) => (
                 <p key={note} className="text-sm leading-relaxed text-slate-600">
                   {note}
                 </p>
