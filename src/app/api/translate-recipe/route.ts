@@ -72,15 +72,21 @@ export async function POST(request: Request) {
 
     let index = 0;
 
+    const titleEn = translations[index++] ?? "";
+    const descriptionEn = translations[index++] ?? "";
+    const ingredientsEn = translations.slice(index, index + ingredientsCount);
+    index += ingredientsCount;
+    const stepsEn = translations.slice(index, index + stepsCount);
+    index += stepsCount;
+    const pointsEn = translations.slice(index, index + pointsCount);
+    index += pointsCount;
+
     const result = {
-      titleEn: translations[index] || "",
-      descriptionEn: translations[++index] || "",
-      ingredientsEn: translations.slice(++index, index + ingredientsCount) || [],
-      stepsEn: translations.slice(index + ingredientsCount, index + ingredientsCount + stepsCount) || [],
-      pointsEn: translations.slice(
-        index + ingredientsCount + stepsCount,
-        index + ingredientsCount + stepsCount + pointsCount
-      ) || [],
+      titleEn,
+      descriptionEn,
+      ingredientsEn,
+      stepsEn,
+      pointsEn,
     };
 
     return NextResponse.json(result);

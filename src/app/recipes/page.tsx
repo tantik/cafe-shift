@@ -96,6 +96,10 @@ function RecipesContent() {
     return selectedRecipe.notes;
   };
 
+  function stripStepNumber(step: string) {
+    return step.replace(/^[0-9０-９]+[.)．]\s*/u, "");
+  }
+
   return (
     <div className="space-y-3 pb-4">
       <section className="overflow-x-auto p-0.5 scroll-px-1 scrollbar-hide">
@@ -146,7 +150,7 @@ function RecipesContent() {
             {getSteps().map((step, index) => (
               <li key={step} className="flex gap-2 text-sm leading-relaxed text-slate-600">
                 <span className="shrink-0 font-bold text-emerald-800">{index + 1}.</span>
-                <span>{step}</span>
+                <span>{stripStepNumber(step)}</span>
               </li>
             ))}
           </ol>

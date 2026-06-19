@@ -136,9 +136,6 @@ function ManagerRecipesContent() {
     });
   }, [query, recipes, selectedFilter]);
 
-  const publishedCount = recipes.filter((recipe) => recipe.active).length;
-  const categoryCount = new Set(recipes.map((recipe) => recipe.category)).size;
-
   function openAddEditor() {
     setEditingId(null);
     setDraft(emptyDraft);
@@ -318,19 +315,6 @@ function ManagerRecipesContent() {
   return (
     <>
       <div className="mx-auto max-w-4xl space-y-4 pb-8">
-        <section className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          {[
-            { label: t("managerRecipes.totalRecipes"), value: `${recipes.length}${t("managerRecipes.itemsSuffix")}` },
-            { label: t("managerRecipes.published"), value: `${publishedCount}${t("managerRecipes.itemsSuffix")}` },
-            { label: t("managerRecipes.draft"), value: `${recipes.length - publishedCount}${t("managerRecipes.itemsSuffix")}` },
-            { label: t("managerRecipes.categories"), value: `${categoryCount}${t("managerRecipes.itemsSuffix")}` },
-          ].map((item) => (
-            <div key={item.label} className="rounded-2xl border border-amber-100 bg-amber-50 p-3 shadow-sm">
-              <p className="text-xs text-slate-500">{item.label}</p>
-              <p className="mt-1 text-xl font-bold text-slate-900">{item.value}</p>
-            </div>
-          ))}
-        </section>
 
         <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:p-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
