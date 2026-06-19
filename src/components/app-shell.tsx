@@ -10,16 +10,19 @@ import logo from "@/logo.png";
 export default function AppShell({
   children,
   variant = "mobile",
+  showMobileNav = true,
 }: {
   children: ReactNode;
   variant?: "mobile" | "wide";
+  showMobileNav?: boolean;
 }) {
   const widthClass = variant === "wide" ? "max-w-6xl px-3 sm:px-5 md:px-6" : "max-w-[430px] px-3 sm:px-4";
+  const bottomPadding = showMobileNav ? "pb-24" : "pb-6";
 
   return (
     <I18nProvider>
       <div className="min-h-screen bg-[#f7f1e6] text-slate-900">
-        <div className={`mx-auto flex min-h-screen flex-col pb-24 pt-6 ${widthClass}`}>
+        <div className={`mx-auto flex min-h-screen flex-col pt-6 ${bottomPadding} ${widthClass}`}>
           <header className="mb-4 rounded-xl bg-white/90 px-3.5 py-3 shadow-sm shadow-slate-200 backdrop-blur-sm">
             <div className="flex items-center justify-between gap-3">
               <Link
@@ -39,7 +42,7 @@ export default function AppShell({
             </div>
           </header>
           <main className="flex-1">{children}</main>
-          <MobileNav />
+          {showMobileNav ? <MobileNav /> : null}
         </div>
       </div>
     </I18nProvider>

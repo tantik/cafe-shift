@@ -1,201 +1,196 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import Link from "next/link";
 import AppShell from "@/components/app-shell";
 import { useI18n } from "@/lib/i18n/use-i18n";
-import Link from "next/link";
 
-type QuickAction = {
-  key: string;
-  href: string;
-  titleKey: string;
-  descriptionKey: string;
-};
+type ShiftCode = "shift_1" | "shift_2" | "shift_3" | "full_day" | "store_closed" | "vacation" | "none";
 
-type OverviewShiftKind = "full" | "short" | "off" | "none";
-
-type OverviewShift = {
-  time: string;
-  hours: number;
-  kind: OverviewShiftKind;
-};
-
-type OverviewRow = {
+type Employee = {
+  id: string;
   name: string;
-  shifts: OverviewShift[];
 };
 
-type ActualMonthlyTotal = {
-  workedDays: number;
-  workedHours: number;
-  note: "ok" | "lower" | "overtime" | "missing";
+type Day = {
+  key: string;
+  date: string;
+  weekday: string;
 };
 
-const noShift: OverviewShift = { time: "", hours: 0, kind: "none" };
-const offShift: OverviewShift = { time: "", hours: 0, kind: "off" };
-const morningShift: OverviewShift = { time: "8:30-13:00", hours: 4.5, kind: "short" };
-const afternoonShift: OverviewShift = { time: "13:00-17:00", hours: 4, kind: "short" };
-const afternoonLongShift: OverviewShift = { time: "13:00-17:30", hours: 4.5, kind: "short" };
-const fullShift: OverviewShift = { time: "8:30-17:00", hours: 7.5, kind: "full" };
+type WorkReport = {
+  employeeId: string;
+  workDate: string;
+  startedAt: string;
+  endedAt: string;
+  breakMinutes: number;
+  transportationCost: number;
+  message?: string;
+};
 
-const shiftOverviewWeekdays = ["月", "火", "水", "木", "金", "土", "日"];
-const shiftOverviewDays = Array.from({ length: 28 }, (_, index) => ({
-  key: `2026-06-${String(index + 1).padStart(2, "0")}`,
-  date: `6/${index + 1}`,
-  weekday: shiftOverviewWeekdays[index % 7],
-  isWeekend: index % 7 >= 5,
-  isToday: index === 0,
-}));
+type SelectedCell = {
+  employeeId: string;
+  dayKey: string;
+};
 
-const shiftOverviewWeeks = Array.from({ length: 4 }, (_, index) => {
-  const weekDays = shiftOverviewDays.slice(index * 7, index * 7 + 7);
+const employees: Employee[] = [
+  { id: "manabu", name: "まなぶ" },
+  { id: "ly", name: "LY" },
+  { id: "yuko", name: "ゆうこ" },
+  { id: "seira", name: "せいら" },
+  { id: "asako", name: "あさこ" },
+  { id: "my_ha", name: "My Ha" },
+  { id: "hyori", name: "Hyori" },
+  { id: "bui", name: "Bui" },
+  { id: "olha", name: "Olha" },
+  { id: "grace", name: "Grace" },
+  { id: "cons", name: "Cons" },
+  { id: "bao", name: "Bao" },
+  { id: "gyu", name: "GYU" },
+  { id: "estany", name: "Estany" },
+  { id: "maria", name: "Maria" },
+];
+
+const weekdays = ["月", "火", "水", "木", "金", "土", "日"];
+const weekStarts = [1, 8, 15, 22, 29];
+
+const weeks = weekStarts.map((startDay, weekIndex) => {
+  const days: Day[] = Array.from({ length: 7 }, (_, index) => {
+    const day = startDay + index;
+    const month = day > 30 ? 7 : 6;
+    const date = day > 30 ? day - 30 : day;
+    return {
+      key: `2026-${String(month).padStart(2, "0")}-${String(date).padStart(2, "0")}`,
+      date: `${month}/${date}`,
+      weekday: weekdays[index],
+    };
+  });
+
   return {
-    key: `week-${index + 1}`,
-    labelKey: `manager.shiftOverview.week${index + 1}`,
-    range: `${weekDays[0].date}(${weekDays[0].weekday})〜${weekDays[6].date}(${weekDays[6].weekday})`,
-    days: weekDays,
-    startIndex: index * 7,
+    key: `week-${weekIndex + 1}`,
+    range: `${days[0].date}(${days[0].weekday})〜${days[6].date}(${days[6].weekday})`,
+    days,
   };
 });
 
-function repeatPattern(pattern: OverviewShift[]) {
-  return Array.from({ length: 28 }, (_, index) => pattern[index % pattern.length]);
-}
+const shiftMeta: Record<ShiftCode, { label: string; time: string; hours: number; className: string }> = {
+  shift_1: { label: "1", time: "08:30〜13:00", hours: 4.5, className: "border-sky-200 bg-sky-50 text-sky-800" },
+  shift_2: { label: "2", time: "13:00〜17:30", hours: 4.5, className: "border-orange-200 bg-orange-50 text-orange-800" },
+  shift_3: { label: "3", time: "08:30〜10:00", hours: 1.5, className: "border-yellow-200 bg-yellow-50 text-yellow-800" },
+  full_day: { label: "通", time: "08:30〜17:30", hours: 9, className: "border-emerald-200 bg-emerald-50 text-emerald-800" },
+  store_closed: { label: "祝日", time: "", hours: 0, className: "border-slate-200 bg-slate-100 text-slate-600" },
+  vacation: { label: "休暇", time: "", hours: 0, className: "border-violet-200 bg-violet-50 text-violet-700" },
+  none: { label: "-", time: "", hours: 0, className: "border-slate-100 bg-white text-slate-400" },
+};
 
-function applyShiftOverrides(shifts: OverviewShift[], overrides: Record<number, OverviewShift>) {
-  return shifts.map((shift, index) => overrides[index] ?? shift);
-}
+const editableShiftCodes: ShiftCode[] = ["shift_1", "shift_2", "shift_3", "full_day", "store_closed", "vacation", "none"];
 
-const shiftOverviewRows: OverviewRow[] = [
+const reports: WorkReport[] = [
   {
-    name: "山田 花子",
-    shifts: applyShiftOverrides(
-      repeatPattern([morningShift, noShift, fullShift, noShift, afternoonShift, offShift, offShift]),
-      { 8: morningShift, 11: offShift, 16: afternoonLongShift },
-    ),
+    employeeId: "manabu",
+    workDate: "2026-06-16",
+    startedAt: "08:15",
+    endedAt: "18:39",
+    breakMinutes: 30,
+    transportationCost: 500,
+    message: "片付けに時間がかかった。",
   },
   {
-    name: "佐藤 健",
-    shifts: applyShiftOverrides(
-      repeatPattern([noShift, afternoonLongShift, noShift, morningShift, offShift, fullShift, noShift]),
-      { 10: fullShift, 12: noShift, 21: morningShift },
-    ),
+    employeeId: "ly",
+    workDate: "2026-06-16",
+    startedAt: "13:00",
+    endedAt: "17:34",
+    breakMinutes: 0,
+    transportationCost: 420,
+    message: "通常通り。",
   },
   {
-    name: "鈴木 愛",
-    shifts: applyShiftOverrides(
-      repeatPattern([afternoonLongShift, fullShift, noShift, noShift, morningShift, offShift, offShift]),
-      { 15: noShift, 18: fullShift, 24: afternoonShift },
-    ),
+    employeeId: "yuko",
+    workDate: "2026-06-17",
+    startedAt: "08:31",
+    endedAt: "13:02",
+    breakMinutes: 0,
+    transportationCost: 500,
   },
   {
-    name: "伊藤 翔",
-    shifts: applyShiftOverrides(
-      repeatPattern([fullShift, offShift, afternoonLongShift, noShift, noShift, morningShift, offShift]),
-      { 14: noShift, 17: morningShift, 24: fullShift },
-    ),
+    employeeId: "grace",
+    workDate: "2026-06-18",
+    startedAt: "08:25",
+    endedAt: "17:42",
+    breakMinutes: 60,
+    transportationCost: 620,
+    message: "ランチ後の補充を対応。",
   },
   {
-    name: "高橋 美咲",
-    shifts: applyShiftOverrides(
-      repeatPattern([offShift, noShift, morningShift, afternoonLongShift, noShift, offShift, fullShift]),
-      { 9: afternoonShift, 13: noShift, 20: morningShift },
-    ),
-  },
-  {
-    name: "田中 優",
-    shifts: applyShiftOverrides(
-      repeatPattern([morningShift, afternoonLongShift, offShift, fullShift, noShift, noShift, offShift]),
-      { 16: morningShift, 19: afternoonLongShift, 25: fullShift },
-    ),
-  },
-  {
-    name: "中村 蓮",
-    shifts: applyShiftOverrides(
-      repeatPattern([noShift, fullShift, morningShift, offShift, afternoonLongShift, noShift, offShift]),
-      { 14: afternoonShift, 19: fullShift, 26: morningShift },
-    ),
-  },
-  {
-    name: "小林 杏",
-    shifts: applyShiftOverrides(
-      repeatPattern([afternoonLongShift, noShift, offShift, morningShift, fullShift, offShift, noShift]),
-      { 15: morningShift, 21: fullShift, 25: noShift },
-    ),
+    employeeId: "bao",
+    workDate: "2026-06-18",
+    startedAt: "08:30",
+    endedAt: "10:05",
+    breakMinutes: 0,
+    transportationCost: 300,
   },
 ];
 
-const demoActualMonthlyTotals: Record<string, ActualMonthlyTotal> = {
-  "山田 花子": { workedDays: 11, workedHours: 63.5, note: "lower" },
-  "佐藤 健": { workedDays: 12, workedHours: 67, note: "ok" },
-  "鈴木 愛": { workedDays: 13, workedHours: 75, note: "overtime" },
-  "伊藤 翔": { workedDays: 12, workedHours: 66, note: "ok" },
-  "高橋 美咲": { workedDays: 10, workedHours: 57, note: "lower" },
-  "田中 優": { workedDays: 12, workedHours: 66, note: "ok" },
-  "中村 蓮": { workedDays: 13, workedHours: 74.5, note: "overtime" },
-  "小林 杏": { workedDays: 0, workedHours: 0, note: "missing" },
-};
-
-function shiftCellClass(kind: OverviewShiftKind) {
-  if (kind === "full") {
-    return "border-emerald-100 bg-emerald-50 text-emerald-900";
-  }
-  if (kind === "short") {
-    return "border-amber-100 bg-amber-50 text-amber-900";
-  }
-  if (kind === "off") {
-    return "border-slate-200 bg-slate-100 text-slate-500";
-  }
-  return "border-transparent bg-transparent text-slate-300";
+function buildInitialSchedule() {
+  const pattern: ShiftCode[] = ["shift_1", "shift_2", "shift_3", "full_day", "none", "store_closed", "vacation"];
+  return Object.fromEntries(
+    employees.map((employee, employeeIndex) => [
+      employee.id,
+      Object.fromEntries(
+        weeks.flatMap((week) => week.days).map((day, dayIndex) => {
+          const shift = pattern[(employeeIndex + dayIndex * 2) % pattern.length];
+          return [day.key, shift];
+        }),
+      ),
+    ]),
+  ) as Record<string, Record<string, ShiftCode>>;
 }
 
-function formatOverviewHours(value: number) {
-  return Number.isInteger(value) ? String(value) : value.toFixed(1);
+function reportKey(employeeId: string, dayKey: string) {
+  return `${employeeId}:${dayKey}`;
 }
 
-function overviewTotal(shifts: OverviewShift[]) {
-  return shifts.reduce(
-    (total, shift) => ({
-      days: shift.hours > 0 ? total.days + 1 : total.days,
-      hours: total.hours + shift.hours,
-    }),
-    { days: 0, hours: 0 },
-  );
+function minutesFromTime(time: string) {
+  const [hours, minutes] = time.split(":").map(Number);
+  return hours * 60 + minutes;
 }
 
-function formatOverviewTotal(total: { days: number; hours: number }, t: (key: string) => string) {
-  return `${total.days}${t("manager.shiftOverview.days")} / ${formatOverviewHours(total.hours)}${t("manager.shiftOverview.hours")}`;
+function reportHours(report: WorkReport) {
+  return Math.max(0, (minutesFromTime(report.endedAt) - minutesFromTime(report.startedAt) - report.breakMinutes) / 60);
 }
 
-function actualTotalClass(note: ActualMonthlyTotal["note"]) {
-  if (note === "ok") {
-    return "border-emerald-100 bg-emerald-50 text-emerald-800";
+function formatHours(hours: number) {
+  if (hours === 0) {
+    return "-";
   }
-  if (note === "lower") {
-    return "border-amber-100 bg-amber-50 text-amber-800";
-  }
-  if (note === "overtime") {
-    return "border-sky-100 bg-sky-50 text-sky-800";
-  }
-  return "border-slate-200 bg-slate-50 text-slate-500";
+  return `${Number.isInteger(hours) ? hours : hours.toFixed(1)}h`;
 }
 
-function actualNoteLabel(note: ActualMonthlyTotal["note"], t: (key: string) => string) {
-  if (note === "ok") {
-    return t("manager.shiftOverview.actualOk");
+// Demo auto-generation. Production should consider staffing rules, max hours, vacations, fairness, and required headcount.
+function buildDraftFromRequests(current: Record<string, Record<string, ShiftCode>>) {
+  const next = structuredClone(current);
+  const draftPattern: ShiftCode[] = ["shift_1", "shift_2", "none", "full_day", "vacation", "shift_3", "none"];
+  for (const employee of employees) {
+    for (const week of weeks) {
+      for (const day of week.days) {
+        next[employee.id][day.key] = draftPattern[(employees.indexOf(employee) + Number(day.key.slice(-2))) % draftPattern.length];
+      }
+    }
   }
-  if (note === "lower") {
-    return t("manager.shiftOverview.actualLower");
-  }
-  if (note === "overtime") {
-    return t("manager.shiftOverview.actualOvertime");
-  }
-  return t("manager.shiftOverview.actualMissing");
+  return next;
 }
+
+const reportByCell = Object.fromEntries(reports.map((report) => [reportKey(report.employeeId, report.workDate), report]));
+
+const managementLinks = [
+  { href: "/manager/employees", labelKey: "manager.staff" },
+  { href: "/manager/recipes", labelKey: "manager.recipes" },
+  { href: "/manager/settings", labelKey: "manager.settings" },
+];
 
 export default function ManagerPage() {
   return (
-    <AppShell variant="wide">
+    <AppShell variant="wide" showMobileNav={false}>
       <ManagerContent />
     </AppShell>
   );
@@ -203,341 +198,214 @@ export default function ManagerPage() {
 
 function ManagerContent() {
   const { t } = useI18n();
-  const [selectedWeekIndex, setSelectedWeekIndex] = useState(0);
-  // Mock data (deterministic, no external calls)
-  const todayLabel = "6月1日（月）";
-  const shiftGroups = [
-    { title: "1シフト 08:30–13:00", names: ["山田", "佐藤", "田中"] },
-    { title: "2シフト 13:00–17:30", names: ["鈴木", "高橋"] },
-    { title: "通しシフト 08:30–17:30", names: ["伊藤"] },
-  ];
-  const summary = { present: 6, off: 2 };
-  const attention = [
-    { title: t("manager.statusShiftRequests"), subtitle: t("suggestions.statusUnchecked"), count: 8 },
-    { title: t("manager.statusUncheckedReports"), subtitle: t("manager.extendedWork"), count: 3 },
-    { title: t("manager.statusSuggestions"), subtitle: t("suggestions.statusUnchecked"), count: 1 },
-  ];
-  const selectedWeek = shiftOverviewWeeks[selectedWeekIndex];
-  const monthTotal = overviewTotal(shiftOverviewRows.flatMap((row) => row.shifts));
-  const pendingRequests = 8;
+  const [selectedWeekIndex, setSelectedWeekIndex] = useState(2);
+  const [schedule, setSchedule] = useState(buildInitialSchedule);
+  const [selectedCell, setSelectedCell] = useState<SelectedCell | null>(null);
+  const [draftShift, setDraftShift] = useState<ShiftCode>("none");
+  const [success, setSuccess] = useState("");
+  const selectedWeek = weeks[selectedWeekIndex];
 
-  const quickActions: QuickAction[] = [
-    {
-      key: "shifts",
-      href: "/manager/shifts",
-      titleKey: "manager.actions.shifts.title",
-      descriptionKey: "manager.actions.shifts.description",
-    },
-    {
-      key: "requests",
-      href: "/manager/requests",
-      titleKey: "manager.actions.requests.title",
-      descriptionKey: "manager.actions.requests.description",
-    },
-    {
-      key: "timeReports",
-      href: "/manager/time-reports",
-      titleKey: "manager.actions.timeReports.title",
-      descriptionKey: "manager.actions.timeReports.description",
-    },
-    {
-      key: "suggestions",
-      href: "/manager/suggestions",
-      titleKey: "manager.actions.suggestions.title",
-      descriptionKey: "manager.actions.suggestions.description",
-    },
-    {
-      key: "employees",
-      href: "/manager/employees",
-      titleKey: "manager.actions.employees.title",
-      descriptionKey: "manager.actions.employees.description",
-    },
-    {
-      key: "recipes",
-      href: "/manager/recipes",
-      titleKey: "manager.actions.recipes.title",
-      descriptionKey: "manager.actions.recipes.description",
-    },
-    {
-      key: "settings",
-      href: "/manager/settings",
-      titleKey: "manager.actions.settings.title",
-      descriptionKey: "manager.actions.settings.description",
-    },
-  ];
+  const selectedEmployee = selectedCell ? employees.find((employee) => employee.id === selectedCell.employeeId) : undefined;
+  const selectedDay = selectedCell ? selectedWeek.days.find((day) => day.key === selectedCell.dayKey) : undefined;
+  const selectedReport = selectedCell ? reportByCell[reportKey(selectedCell.employeeId, selectedCell.dayKey)] : undefined;
+
+  const weekRows = useMemo(
+    () =>
+      employees.map((employee) => {
+        const weekShifts = selectedWeek.days.map((day) => schedule[employee.id][day.key] ?? "none");
+        const planned = weekShifts.reduce((total, shift) => total + shiftMeta[shift].hours, 0);
+        const actual = selectedWeek.days.reduce((total, day) => {
+          const report = reportByCell[reportKey(employee.id, day.key)];
+          return total + (report ? reportHours(report) : 0);
+        }, 0);
+        return { employee, weekShifts, planned, actual };
+      }),
+    [schedule, selectedWeek],
+  );
+
+  function openCell(employeeId: string, dayKey: string) {
+    setSelectedCell({ employeeId, dayKey });
+    setDraftShift(schedule[employeeId][dayKey] ?? "none");
+  }
+
+  function saveCell() {
+    if (!selectedCell) {
+      return;
+    }
+    setSchedule((current) => ({
+      ...current,
+      [selectedCell.employeeId]: {
+        ...current[selectedCell.employeeId],
+        [selectedCell.dayKey]: draftShift,
+      },
+    }));
+    setSelectedCell(null);
+  }
+
+  function generateDraft() {
+    setSchedule((current) => buildDraftFromRequests(current));
+    setSuccess(t("manager.generatedDraftSuccess"));
+  }
 
   return (
-      <div className="space-y-5 pb-8">
-        {/* Header */}
-        <header className="rounded-2xl bg-gradient-to-r from-emerald-50 to-amber-50 p-6 shadow-md border border-amber-100">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-            <div>
-              <h1 className="text-3xl font-bold text-slate-900">{t("manager.title")}</h1>
-              <p className="mt-1 text-sm text-slate-600">{t("manager.subtitle")}</p>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="rounded-full bg-green-800 text-white px-3 py-1 text-sm font-semibold">{t("manager.managerRole")}</div>
-              <div className="text-sm font-medium">{t("manager.managerName")}</div>
-            </div>
-          </div>
-        </header>
-
-        {/* Top two columns: Today overview + Attention (stack on mobile, side-by-side on md) */}
-        <div className="grid gap-4 md:grid-cols-2">
-          {/* Today overview */}
-          <section className="rounded-2xl bg-white p-4 shadow-sm border border-slate-100">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-sm text-slate-500">{t("manager.todayTitle")}</div>
-              <div className="mt-1 font-semibold text-slate-900">{todayLabel}</div>
-            </div>
-            <div className="text-sm text-slate-600">
-              {t("manager.totalScheduled")}{" "}
-              <span className="font-semibold text-slate-800">
-                {summary.present}
-                {t("manager.peopleSuffix")}
-              </span>
-            </div>
-          </div>
-
-          <div className="mt-4 space-y-3">
-            {shiftGroups.map((g) => (
-              <div key={g.title} className="flex items-center justify-between rounded-xl bg-amber-50 p-3 border border-amber-100">
-                <div>
-                  <div className="text-sm font-semibold text-slate-800">{g.title}</div>
-                  <div className="text-xs text-slate-600 mt-1">{g.names.join('、')}</div>
-                </div>
-                <div className="text-xs text-slate-500">
-                  {g.names.length}
-                  {t("manager.peopleSuffix")}
-                </div>
-              </div>
-            ))}
-
-            <div className="mt-2 flex gap-3">
-              <div className="rounded-full bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-700">
-                {t("manager.presentScheduled")} {summary.present}
-                {t("manager.peopleSuffix")}
-              </div>
-              <div className="rounded-full bg-slate-50 px-3 py-1 text-sm font-medium text-slate-700">
-                {t("manager.off")} {summary.off}
-                {t("manager.peopleSuffix")}
-              </div>
-            </div>
-          </div>
-          </section>
-          {/* Attention card */}
-          <section className="rounded-2xl bg-amber-50 p-4 shadow-sm border border-amber-100">
-            <div className="flex items-center justify-between">
-              <div className="text-lg font-semibold text-slate-900">{t("manager.statusTitle")}</div>
-              <div className="text-xs text-slate-500">{t("manager.statusDescription")}</div>
-            </div>
-            <div className="mt-3 grid grid-cols-3 gap-3">
-              {attention.map((a) => (
-                <div key={a.title} className="rounded-xl bg-white p-3 shadow-sm border border-slate-100 text-center">
-                  <div className="text-sm font-medium text-slate-800">{a.title}</div>
-                  <div className="text-xs text-slate-500 mt-1">{a.subtitle}</div>
-                  <div className="mt-2 text-lg font-semibold text-amber-700">
-                    {a.count}
-                    {t("manager.itemsSuffix")}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-        </div>
-
-        {/* Monthly shift overview */}
-        <section className="rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-slate-900">{t("manager.shiftOverview.title")}</h2>
-              <p className="mt-1 max-w-2xl text-sm text-slate-600">{t("manager.shiftOverview.subtitle")}</p>
-            </div>
-            <Link
-              href="/manager/shifts"
-              className="inline-flex shrink-0 items-center justify-center rounded-xl bg-emerald-800 px-3 py-2 text-sm font-semibold text-white transition hover:bg-emerald-900"
+    <div className="space-y-3 pb-2">
+      <section className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+        <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setSelectedWeekIndex((current) => Math.max(0, current - 1))}
+              disabled={selectedWeekIndex === 0}
+              className="rounded-lg border border-slate-200 bg-white px-2 py-2 text-[11px] font-semibold text-slate-700 shadow-sm disabled:opacity-40"
             >
-              {t("manager.shiftOverview.openEditor")}
-            </Link>
+              {t("manager.previousWeek")}
+            </button>
+            <span className="min-w-[116px] text-center text-xs font-bold text-slate-950">{selectedWeek.range}</span>
+            <button
+              type="button"
+              onClick={() => setSelectedWeekIndex((current) => Math.min(weeks.length - 1, current + 1))}
+              disabled={selectedWeekIndex === weeks.length - 1}
+              className="rounded-lg border border-slate-200 bg-white px-2 py-2 text-[11px] font-semibold text-slate-700 shadow-sm disabled:opacity-40"
+            >
+              {t("manager.nextWeek")}
+            </button>
           </div>
+          <button
+            type="button"
+            onClick={generateDraft}
+            className="rounded-lg bg-emerald-800 px-3 py-2 text-sm font-bold text-white shadow-sm"
+          >
+            {t("manager.generateFromRequests")}
+          </button>
+        </div>
+        {success ? <p className="mt-2 rounded-lg bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800">{success}</p> : null}
 
-          <div className="mt-3 space-y-3">
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-              {[
-                { label: t("manager.shiftOverview.period"), value: "2026/6/1–6/28" },
-                { label: t("manager.shiftOverview.staffCount"), value: `${shiftOverviewRows.length}${t("manager.peopleSuffix")}` },
-                { label: t("manager.shiftOverview.totalWorkdays"), value: `${monthTotal.days}${t("manager.shiftOverview.days")}` },
-                { label: t("manager.shiftOverview.totalHours"), value: `${formatOverviewHours(monthTotal.hours)}${t("manager.shiftOverview.hours")}` },
-              ].map((item) => (
-                <div key={item.label} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
-                  <p className="text-xs text-slate-500">{item.label}</p>
-                  <p className="mt-1 text-lg font-bold text-slate-900">{item.value}</p>
-                </div>
-              ))}
-              <div className="rounded-xl border border-amber-100 bg-amber-50 px-3 py-2.5">
-                <p className="text-xs text-slate-500">{t("manager.shiftOverview.pendingRequests")}</p>
-                <p className="mt-1 text-lg font-bold text-amber-800">
-                  {pendingRequests}
-                  {t("manager.itemsSuffix")}
-                </p>
-              </div>
-            </div>
-
-            <section className="rounded-2xl border border-slate-200 bg-slate-50">
-              <div className="border-b border-slate-200 p-3">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <h3 className="text-sm font-semibold text-slate-900">{t("manager.shiftOverview.weeklyView")}</h3>
-                    <p className="mt-0.5 text-xs text-slate-500">{selectedWeek.range}</p>
-                    <p className="mt-0.5 text-xs font-medium text-emerald-700">{t("manager.shiftOverview.selectedWeekTotalHint")}</p>
-                  </div>
-                  <div className="flex gap-2 overflow-x-auto pb-0.5">
-                    {shiftOverviewWeeks.map((week, index) => (
-                      <button
-                        key={week.key}
-                        type="button"
-                        onClick={() => setSelectedWeekIndex(index)}
-                        className={`shrink-0 rounded-xl border px-3 py-2 text-xs font-semibold transition ${
-                          selectedWeekIndex === index
-                            ? "border-emerald-700 bg-emerald-800 text-white"
-                            : "border-slate-200 bg-white text-slate-600 hover:border-emerald-300"
-                        }`}
-                      >
-                        <span className="block">{t("manager.shiftOverview.weekLabel")} {index + 1}</span>
-                        <span className="mt-0.5 block font-medium opacity-80">{week.range}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              <div className="overflow-x-auto">
-                <table className="min-w-[980px] border-separate border-spacing-0 text-left text-sm">
-                  <thead>
-                    <tr>
-                      <th className="sticky left-0 z-20 w-36 border-b border-r border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-500">
-                        {t("manager.shiftOverview.employee")}
-                      </th>
-                      {selectedWeek.days.map((day) => (
-                        <th
-                          key={day.key}
-                          className={`w-[76px] border-b border-r border-slate-200 px-2 py-2 text-center ${
-                            day.isToday
-                              ? "bg-emerald-50"
-                              : day.isWeekend
-                                ? "bg-amber-50/70"
-                                : "bg-white"
+        <div className="mt-3 overflow-x-auto">
+          <table className="min-w-[880px] border-separate border-spacing-0 text-center text-[10px]">
+            <thead>
+              <tr>
+                <th className="w-24 border-b border-r border-slate-200 bg-slate-50 px-2 py-1.5 text-left text-[11px] font-bold text-slate-600">
+                  {t("manager.shiftOverview.employee")}
+                </th>
+                {selectedWeek.days.map((day) => (
+                  <th key={day.key} className="border-b border-r border-slate-200 bg-white px-1 py-1 text-[10px] font-bold text-slate-600">
+                    <span className="block">{day.date}</span>
+                    <span className="block text-[9px]">{day.weekday}</span>
+                  </th>
+                ))}
+                <th className="w-16 border-b border-r border-slate-200 bg-slate-50 px-1 py-1 text-[10px] font-bold text-slate-600">
+                  {t("manager.weekPlanned")}
+                </th>
+                <th className="w-16 border-b border-slate-200 bg-slate-50 px-1 py-1 text-[10px] font-bold text-slate-600">
+                  {t("manager.weekActual")}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {weekRows.map((row) => (
+                <tr key={`${selectedWeek.key}-${row.employee.id}`}>
+                  <th className="border-b border-r border-slate-100 bg-white px-2 py-1.5 text-left text-[11px] font-bold text-slate-800">
+                    {row.employee.name}
+                  </th>
+                  {row.weekShifts.map((shift, index) => {
+                    const day = selectedWeek.days[index];
+                    const meta = shiftMeta[shift];
+                    const hasReport = Boolean(reportByCell[reportKey(row.employee.id, day.key)]);
+                    return (
+                      <td key={`${row.employee.id}-${day.key}`} className="border-b border-r border-slate-100 bg-white px-0.5 py-1">
+                        <button
+                          type="button"
+                          onClick={() => openCell(row.employee.id, day.key)}
+                          className={`inline-flex h-7 w-full min-w-10 items-center justify-center rounded border px-1 text-[10px] font-bold ${meta.className} ${
+                            hasReport ? "ring-1 ring-emerald-500" : ""
                           }`}
                         >
-                          <span className="block text-xs font-semibold text-slate-900">{day.date}</span>
-                          <span className="mt-0.5 block text-[11px] text-slate-500">{day.weekday}</span>
-                        </th>
-                      ))}
-                      <th className="w-28 border-b border-r border-slate-200 bg-slate-50 px-3 py-2 text-right text-xs font-semibold text-slate-500">
-                        {t("manager.shiftOverview.selectedWeekTotal")}
-                      </th>
-                      <th className="w-32 border-b border-r border-slate-200 bg-emerald-50 px-3 py-2 text-right text-xs font-semibold text-emerald-800">
-                        {t("manager.shiftOverview.monthlyPlanned")}
-                      </th>
-                      <th className="w-36 border-b border-slate-200 bg-amber-50 px-3 py-2 text-right text-xs font-semibold text-amber-800">
-                        {t("manager.shiftOverview.monthlyActual")}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {shiftOverviewRows.map((row) => {
-                      const weekShifts = row.shifts.slice(selectedWeek.startIndex, selectedWeek.startIndex + 7);
-                      const weeklyTotal = overviewTotal(weekShifts);
-                      const plannedTotal = overviewTotal(row.shifts);
-                      const actualTotal = demoActualMonthlyTotals[row.name];
-                      return (
-                        <tr key={`${selectedWeek.key}-${row.name}`} className="group">
-                          <th className="sticky left-0 z-10 border-r border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 group-hover:bg-amber-50">
-                            {row.name}
-                          </th>
-                          {weekShifts.map((shift, index) => (
-                            <td key={`${selectedWeek.key}-${row.name}-${selectedWeek.days[index].key}`} className="border-r border-t border-slate-100 bg-white px-1.5 py-2 text-center group-hover:bg-amber-50/40">
-                              <span
-                                className={`inline-flex min-h-8 w-full items-center justify-center rounded-lg border px-1.5 py-1 text-[11px] font-semibold leading-tight ${shiftCellClass(shift.kind)}`}
-                                title={shift.kind === "none" ? t("manager.shiftOverview.noShift") : shift.kind === "off" ? t("manager.shiftOverview.off") : shift.time}
-                              >
-                                {shift.kind === "none"
-                                  ? "—"
-                                  : shift.kind === "off"
-                                    ? t("manager.shiftOverview.off")
-                                    : shift.time}
-                              </span>
-                            </td>
-                          ))}
-                          <td className="border-r border-t border-slate-100 bg-white px-3 py-2 text-right text-xs font-semibold text-slate-800 group-hover:bg-amber-50">
-                            {formatOverviewTotal(weeklyTotal, t)}
-                          </td>
-                          <td className="border-r border-t border-slate-100 bg-white px-3 py-2 text-right text-xs font-semibold text-emerald-800 group-hover:bg-amber-50">
-                            <span className="block text-[11px] text-slate-500">{t("manager.shiftOverview.plannedShort")}</span>
-                            <span>{formatOverviewTotal(plannedTotal, t)}</span>
-                          </td>
-                          <td className="border-t border-slate-100 bg-white px-3 py-2 text-right text-xs font-semibold group-hover:bg-amber-50">
-                            {actualTotal && actualTotal.note !== "missing" ? (
-                              <span className={`inline-flex flex-col items-end rounded-lg border px-2 py-1 ${actualTotalClass(actualTotal.note)}`}>
-                                <span className="text-[11px] font-medium">{actualNoteLabel(actualTotal.note, t)}</span>
-                                <span>{formatOverviewTotal({ days: actualTotal.workedDays, hours: actualTotal.workedHours }, t)}</span>
-                              </span>
-                            ) : (
-                              <span className={`inline-flex flex-col items-end rounded-lg border px-2 py-1 ${actualTotalClass("missing")}`}>
-                                <span className="text-[11px] font-medium">{t("manager.shiftOverview.notReported")}</span>
-                                <span>{t("manager.shiftOverview.actualMissing")}</span>
-                              </span>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                          <span>{meta.label}</span>
+                          {meta.time ? <span className="ml-1 hidden text-[9px] font-semibold md:inline">{meta.time}</span> : null}
+                        </button>
+                      </td>
+                    );
+                  })}
+                  <td className="border-b border-r border-slate-100 bg-white px-1 py-1 text-[11px] font-bold text-slate-800">
+                    {formatHours(row.planned)}
+                  </td>
+                  <td className="border-b border-slate-100 bg-white px-1 py-1 text-[11px] font-bold text-emerald-800">
+                    {formatHours(row.actual)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <nav className="grid grid-cols-3 gap-2">
+        {managementLinks.map((link) => (
+          <Link
+            key={link.href}
+            href={link.href}
+            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-center text-sm font-bold text-slate-800 shadow-sm hover:border-emerald-300"
+          >
+            {t(link.labelKey)}
+          </Link>
+        ))}
+      </nav>
+
+      {selectedCell && selectedEmployee && selectedDay ? (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/35 p-3 sm:items-center">
+          <section className="w-full max-w-md rounded-xl bg-white p-4 shadow-xl" role="dialog" aria-modal="true">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-base font-bold text-slate-950">{t("manager.cellEditTitle")}</h2>
+                <p className="mt-0.5 text-sm font-semibold text-slate-600">
+                  {selectedEmployee.name} / {selectedDay.date}（{selectedDay.weekday}）
+                </p>
               </div>
-            </section>
-          </div>
+              <button type="button" onClick={() => setSelectedCell(null)} className="rounded-lg px-2 py-1 text-sm text-slate-500">
+                {t("manager.cancel")}
+              </button>
+            </div>
 
-          <p className="mt-3 text-xs text-slate-500">{t("manager.shiftOverview.sampleNote")}</p>
-        </section>
+            <div className="mt-4">
+              <p className="text-xs font-bold text-slate-700">{t("manager.plannedShift")}</p>
+              <div className="mt-2 grid grid-cols-4 gap-1.5">
+                {editableShiftCodes.map((code) => (
+                  <button
+                    key={code}
+                    type="button"
+                    onClick={() => setDraftShift(code)}
+                    className={`rounded-lg border px-2 py-2 text-xs font-bold ${
+                      draftShift === code ? "border-emerald-700 bg-emerald-50 text-emerald-900" : "border-slate-200 bg-white text-slate-700"
+                    }`}
+                  >
+                    {shiftMeta[code].label}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-        {/* Quick actions */}
-        <section>
-          <h3 className="text-lg font-semibold text-slate-900">{t("manager.quickActionsTitle")}</h3>
-          <div className="mt-3 grid grid-cols-2 md:grid-cols-3 gap-3">
-            {quickActions.map((q) => {
-              const card = (
-                <div
-                  className="relative flex items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-amber-50 p-4 shadow-sm transition group-hover:border-emerald-400 group-hover:bg-emerald-50"
-                >
-                  <div>
-                    <div className="font-medium text-slate-800">{t(q.titleKey)}</div>
-                    <div className="text-xs font-semibold text-emerald-700">
-                      {t(q.descriptionKey)} / {t("manager.open")}
-                    </div>
-                  </div>
-                  <div className="text-xs text-slate-400">›</div>
+            <div className="mt-4 rounded-lg bg-slate-50 p-3">
+              <h3 className="text-sm font-bold text-slate-950">{t("manager.actualReport")}</h3>
+              {selectedReport ? (
+                <div className="mt-2 grid grid-cols-2 gap-2 text-sm text-slate-700">
+                  <p>{t("manager.workStart")}: <span className="font-bold">{selectedReport.startedAt}</span></p>
+                  <p>{t("manager.workEnd")}: <span className="font-bold">{selectedReport.endedAt}</span></p>
+                  <p>{t("manager.breakTime")}: <span className="font-bold">{selectedReport.breakMinutes}分</span></p>
+                  <p>{t("manager.actualHours")}: <span className="font-bold">{formatHours(reportHours(selectedReport))}</span></p>
+                  <p>{t("manager.transportation")}: <span className="font-bold">{selectedReport.transportationCost}円</span></p>
+                  {selectedReport.message ? <p className="col-span-2">{t("manager.reportMessage")}: {selectedReport.message}</p> : null}
                 </div>
-              );
+              ) : (
+                <p className="mt-2 text-sm font-semibold text-slate-500">{t("manager.noReport")}</p>
+              )}
+            </div>
 
-              return (
-                <Link
-                  key={q.key}
-                  href={q.href}
-                  className="group block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2"
-                >
-                  {card}
-                </Link>
-              );
-            })}
-          </div>
-        </section>
-
-        <p className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs text-slate-600 shadow-sm">
-          <span className="font-semibold text-slate-800">{t("manager.noteTitle")}: </span>
-          {t("manager.noteText")}
-        </p>
-      </div>
+            <button type="button" onClick={saveCell} className="mt-4 h-10 w-full rounded-lg bg-emerald-800 text-sm font-bold text-white">
+              {t("manager.save")}
+            </button>
+          </section>
+        </div>
+      ) : null}
+    </div>
   );
 }

@@ -117,7 +117,7 @@ function statusLabel(status: ReportStatus, t: (key: string) => string) {
 
 export default function ManagerTimeReportsPage() {
   return (
-    <AppShell variant="wide">
+    <AppShell variant="wide" showMobileNav={false}>
       <ManagerTimeReportsContent />
     </AppShell>
   );
@@ -149,19 +149,6 @@ function ManagerTimeReportsContent() {
 
   return (
       <div className="mx-auto max-w-4xl space-y-4 pb-8">
-        <header className="rounded-2xl border border-emerald-100 bg-gradient-to-r from-emerald-50 to-amber-50 p-4 shadow-sm sm:p-5">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-xs font-semibold tracking-[0.16em] text-emerald-700">{t("managerTimeReports.title")}</p>
-              <h1 className="mt-1 text-2xl font-bold text-slate-900">{t("managerTimeReports.title")}</h1>
-              <p className="mt-1 text-sm text-slate-600">{t("managerTimeReports.subtitle")}</p>
-            </div>
-            <span className="inline-flex self-start rounded-full bg-emerald-800 px-3 py-1.5 text-sm font-semibold text-white sm:self-auto">
-              {t("managerTimeReports.managerChip")}
-            </span>
-          </div>
-        </header>
-
         <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {[
             { label: t("managerTimeReports.summary.reportCount"), value: `${summary.count}件` },

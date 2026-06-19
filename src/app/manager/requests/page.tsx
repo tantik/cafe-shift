@@ -61,7 +61,7 @@ const summaryStatuses: RequestStatus[] = ["pending", "reviewed", "applied", "hol
 
 export default function ManagerRequestsPage() {
   return (
-    <AppShell variant="wide">
+    <AppShell variant="wide" showMobileNav={false}>
       <ManagerRequestsContent />
     </AppShell>
   );
@@ -82,19 +82,6 @@ function ManagerRequestsContent() {
 
   return (
       <div className="mx-auto max-w-4xl space-y-4 pb-8">
-        <header className="rounded-2xl border border-emerald-100 bg-gradient-to-r from-emerald-50 to-amber-50 p-4 shadow-sm sm:p-5">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-xs font-semibold tracking-[0.18em] text-emerald-700">{t("managerRequests.title")}</p>
-              <h1 className="mt-1 text-2xl font-bold text-slate-900">{t("managerRequests.title")}</h1>
-              <p className="mt-1 text-sm text-slate-600">{t("managerRequests.subtitle")}</p>
-            </div>
-            <span className="inline-flex self-start rounded-full bg-emerald-800 px-3 py-1.5 text-sm font-semibold text-white sm:self-auto">
-              {t("managerRequests.managerChip")}
-            </span>
-          </div>
-        </header>
-
         <section className="rounded-2xl border border-amber-100 bg-amber-50 p-4 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>

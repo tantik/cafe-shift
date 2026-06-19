@@ -90,7 +90,7 @@ function formatDate(day: CalendarDay) {
 
 export default function ManagerShiftsPage() {
   return (
-    <AppShell variant="wide">
+    <AppShell variant="wide" showMobileNav={false}>
       <ManagerShiftsContent />
     </AppShell>
   );
@@ -192,19 +192,6 @@ function ManagerShiftsContent() {
   return (
     <>
       <div className="mx-auto max-w-4xl space-y-4 pb-8">
-        <header className="rounded-2xl border border-emerald-100 bg-gradient-to-r from-emerald-50 to-amber-50 p-4 shadow-sm sm:p-5">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-xs font-semibold tracking-[0.18em] text-emerald-700">{t("managerShifts.title")}</p>
-              <h1 className="mt-1 text-2xl font-bold text-slate-900">{t("managerShifts.title")}</h1>
-              <p className="mt-1 text-sm text-slate-600">{t("managerShifts.subtitle")}</p>
-            </div>
-            <span className="inline-flex self-start rounded-full bg-emerald-800 px-3 py-1.5 text-sm font-semibold text-white sm:self-auto">
-              {t("managerShifts.managerChip")}
-            </span>
-          </div>
-        </header>
-
         <section className="rounded-2xl border border-amber-100 bg-amber-50 p-4 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>

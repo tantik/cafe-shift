@@ -113,7 +113,7 @@ function statusLabel(active: boolean, t: (key: string) => string) {
 
 export default function ManagerRecipesPage() {
   return (
-    <AppShell variant="wide">
+    <AppShell variant="wide" showMobileNav={false}>
       <ManagerRecipesContent />
     </AppShell>
   );
@@ -189,19 +189,6 @@ function ManagerRecipesContent() {
   return (
     <>
       <div className="mx-auto max-w-4xl space-y-4 pb-8">
-        <header className="rounded-2xl border border-emerald-100/70 bg-emerald-950/5 p-4 shadow-sm sm:p-5">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-xs font-semibold tracking-[0.18em] text-emerald-700/80">{t("managerRecipes.badge")}</p>
-              <h1 className="mt-1 text-2xl font-bold text-slate-900">{t("managerRecipes.title")}</h1>
-              <p className="mt-1 text-sm text-slate-600">{t("managerRecipes.subtitle")}</p>
-            </div>
-            <div className="inline-flex items-center self-start rounded-full bg-emerald-800 px-3 py-1.5 text-sm font-semibold text-white sm:self-auto">
-              {t("managerRecipes.managerChip")}
-            </div>
-          </div>
-        </header>
-
         <section className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {[
             { label: t("managerRecipes.totalRecipes"), value: `${recipes.length}${t("managerRecipes.itemsSuffix")}` },
