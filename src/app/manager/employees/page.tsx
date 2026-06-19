@@ -79,9 +79,6 @@ function ManagerEmployeesContent() {
       (selectedFilter === "unlinked" && employee.lineUserId === "");
     return matchesQuery && matchesFilter;
   });
-  const activeCount = employees.filter((employee) => employee.active).length;
-  const inactiveCount = employees.filter((employee) => !employee.active).length;
-  const unlinkedCount = employees.filter((employee) => employee.lineUserId === "").length;
 
   function openAddEditor() {
     setEditingId(null);
@@ -136,25 +133,6 @@ function ManagerEmployeesContent() {
   return (
     <>
       <div className="mx-auto max-w-4xl space-y-4 pb-8">
-        <section className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
-            <p className="text-xs text-slate-500">{t("managerEmployees.totalStaff")}</p>
-            <p className="mt-1 text-xl font-bold text-slate-900">{employees.length}{t("managerEmployees.peopleSuffix")}</p>
-          </div>
-          <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
-            <p className="text-xs text-slate-500">{t("managerEmployees.activeStaff")}</p>
-            <p className="mt-1 text-xl font-bold text-emerald-800">{activeCount}{t("managerEmployees.peopleSuffix")}</p>
-          </div>
-          <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
-            <p className="text-xs text-slate-500">{t("managerEmployees.inactiveStaff")}</p>
-            <p className="mt-1 text-xl font-bold text-amber-800">{inactiveCount}{t("managerEmployees.peopleSuffix")}</p>
-          </div>
-          <div className="rounded-xl border border-slate-200 bg-slate-950/5 p-3 shadow-sm">
-            <p className="text-xs text-slate-500">{t("managerEmployees.unlinkedStaff")}</p>
-            <p className="mt-1 text-xl font-bold text-slate-900">{unlinkedCount}{t("managerEmployees.peopleSuffix")}</p>
-          </div>
-        </section>
-
         <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
           <div className="flex flex-col gap-2 sm:flex-row">
             <input

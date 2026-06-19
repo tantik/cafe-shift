@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import AppShell from "@/components/app-shell";
+import { currentDemoEmployee } from "@/lib/demo-employees";
 import { useI18n } from "@/lib/i18n/use-i18n";
 import { DEMO_START_DATE, shiftTypes as coreShiftTypes } from "@/lib/mock-data/core";
 import type { ShiftCode } from "@/types/domain";
@@ -30,7 +31,7 @@ type Assignment = {
 
 type BreakMinutes = "0" | "30" | "60";
 
-const selfEmployeeId = "ly";
+const selfEmployeeId = currentDemoEmployee.id;
 const baseWeekStart = DEMO_START_DATE;
 const defaultReportDate = addDays(baseWeekStart, 14);
 const weekdays = ["月", "火", "水", "木", "金", "土", "日"];
@@ -78,6 +79,15 @@ function addDays(dateKey: string, amount: number) {
   const date = parseDateKey(dateKey);
   date.setUTCDate(date.getUTCDate() + amount);
   return formatDateKey(date);
+}
+
+function diffDays(fromDateKey: string, toDateKey: string) {
+  const dayMs = 24 * 60 * 60 * 1000;
+  return Math.floor((parseDateKey(toDateKey).getTime() - parseDateKey(fromDateKey).getTime()) / dayMs);
+}
+
+function getWeekOffsetForDate(dateKey: string) {
+  return Math.floor(diffDays(baseWeekStart, dateKey) / 7);
 }
 
 function createCalendarDay(dateKey: string): CalendarDay {
@@ -195,7 +205,6 @@ function ShiftsContent() {
   const { t } = useI18n();
   const [weekOffset, setWeekOffset] = useState(2);
   const [todayKey, setTodayKey] = useState<string | null>(null);
-  const [reportName, setReportName] = useState(selfEmployeeId);
   const [reportDate, setReportDate] = useState(defaultReportDate);
   const [reportStartTime, setReportStartTime] = useState("08:30");
   const [reportEndTime, setReportEndTime] = useState("13:00");
@@ -224,7 +233,6 @@ function ShiftsContent() {
     setReportSuccess("");
 
     if (
-      !reportName ||
       !reportDate ||
       !reportStartTime ||
       !reportEndTime ||
@@ -243,6 +251,12 @@ function ShiftsContent() {
 
     setReportSuccess(t("shifts.dailyReportSuccessDemo"));
     setReportMessage("");
+  }
+
+  function goToToday() {
+    if (todayKey) {
+      setWeekOffset(getWeekOffsetForDate(todayKey));
+    }
   }
 
   function handleSwipeStart(clientX: number, clientY: number) {
@@ -268,20 +282,32 @@ function ShiftsContent() {
   return (
     <div className="space-y-3 pb-4">
       <div className="space-y-2">
-        <p className="text-sm font-bold tracking-[0.14em] text-emerald-800">{t("shifts.weeklyShift")}</p>
-        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-1.5">
+        <div className="flex flex-wrap items-end justify-between gap-1.5">
+          <p className="text-sm font-bold tracking-[0.14em] text-emerald-800">{t("shifts.weeklyShift")}</p>
+          <p className="rounded-full bg-white px-2 py-1 text-xs font-bold text-slate-600 shadow-sm">
+            {t("shifts.currentStaff")}: <span className="text-slate-950">{currentDemoEmployee.name}</span>
+          </p>
+        </div>
+        <div className="grid grid-cols-[1fr_auto_auto_1fr] items-center gap-1.5">
           <button
             type="button"
             onClick={() => setWeekOffset((current) => current - 1)}
-            className="rounded-lg border border-slate-200 bg-white px-2 py-2 text-[11px] font-semibold text-slate-700 shadow-sm"
+            className="min-w-0 rounded-lg border border-slate-200 bg-white px-1.5 py-2 text-[10px] font-semibold text-slate-700 shadow-sm min-[380px]:px-2 min-[380px]:text-[11px]"
           >
             {t("shifts.previousWeek")}
           </button>
-          <span className="min-w-[86px] text-center text-sm font-bold text-slate-950">{formatPeriod(weekDays)}</span>
+          <span className="min-w-[72px] text-center text-xs font-bold text-slate-950 min-[380px]:min-w-[86px] min-[380px]:text-sm">{formatPeriod(weekDays)}</span>
+          <button
+            type="button"
+            onClick={goToToday}
+            className="rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-2 text-[10px] font-bold text-emerald-800 shadow-sm min-[380px]:text-[11px]"
+          >
+            {t("shifts.today")}
+          </button>
           <button
             type="button"
             onClick={() => setWeekOffset((current) => current + 1)}
-            className="rounded-lg border border-slate-200 bg-white px-2 py-2 text-[11px] font-semibold text-slate-700 shadow-sm"
+            className="min-w-0 rounded-lg border border-slate-200 bg-white px-1.5 py-2 text-[10px] font-semibold text-slate-700 shadow-sm min-[380px]:px-2 min-[380px]:text-[11px]"
           >
             {t("shifts.nextWeek")}
           </button>
@@ -333,17 +359,11 @@ function ShiftsContent() {
           <div className="space-y-2">
             <label className="block min-w-0 text-xs font-semibold text-slate-700">
               {t("shifts.reportName")}
-              <select
-                value={reportName}
-                onChange={(event) => setReportName(event.target.value)}
-                className="mt-1 h-9 w-full rounded-lg border border-slate-200 bg-white px-2 text-sm text-slate-900"
-              >
-                {employees.map((employee) => (
-                  <option key={employee.id} value={employee.id}>
-                    {employee.name}
-                  </option>
-                ))}
-              </select>
+              <input
+                value={currentDemoEmployee.name}
+                readOnly
+                className="mt-1 h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 text-sm font-semibold text-slate-700"
+              />
             </label>
 
             <label className="block min-w-0 text-xs font-semibold text-slate-700">

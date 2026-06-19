@@ -24,3 +24,8 @@ export const demoEmployees: DemoEmployee[] = [
   { id: "estany", name: "Estany", initials: "ES", active: true, lineUserId: "line_estany", memo: "" },
   { id: "maria", name: "Maria", initials: "MR", active: true, lineUserId: "", memo: "" },
 ];
+
+// Demo current employee. In production this will be resolved from LINE LIFF userId.
+export const currentDemoEmployeeName = "Cons";
+
+export const currentDemoEmployee = demoEmployees.find((employee) => employee.name === currentDemoEmployeeName) ?? demoEmployees[0];

@@ -15,9 +15,50 @@ type CalendarDay = {
   isCurrentMonth: boolean;
 };
 
+type DemoReport = {
+  plannedShift: RequestShiftCode;
+  start: string;
+  end: string;
+  breakMinutes: number;
+  actualHours: string;
+  transportation: number;
+  message: string;
+};
+
 const weekdays = ["月", "火", "水", "木", "金", "土", "日"];
 const baseDate = parseDateKey(DEMO_START_DATE);
 const initialMonthOffset = 1;
+const demoRequestHistory: Record<string, RequestShiftCode> = {
+  "2026-06-03": "shift_1",
+  "2026-06-04": "shift_2",
+  "2026-06-06": "vacation",
+  "2026-06-09": "full_day",
+  "2026-06-12": "shift_3",
+  "2026-06-16": "shift_1",
+  "2026-06-17": "store_closed",
+  "2026-06-18": "full_day",
+};
+
+const demoReports: Record<string, DemoReport> = {
+  "2026-06-16": {
+    plannedShift: "shift_1",
+    start: "08:31",
+    end: "13:04",
+    breakMinutes: 0,
+    actualHours: "4.5h",
+    transportation: 500,
+    message: "通常通り。朝の補充を対応しました。",
+  },
+  "2026-06-18": {
+    plannedShift: "full_day",
+    start: "08:28",
+    end: "17:42",
+    breakMinutes: 60,
+    actualHours: "8.2h",
+    transportation: 620,
+    message: "ランチ後の片付けに少し時間がかかりました。",
+  },
+};
 
 const requestOptions: RequestShiftCode[] = ["shift_1", "shift_2", "shift_3", "full_day", "store_closed", "vacation", "none"];
 
@@ -28,6 +69,11 @@ function parseDateKey(dateKey: string) {
 
 function formatDateKey(date: Date) {
   return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`;
+}
+
+function getClientDateKey() {
+  const date = new Date();
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
 function getMonthStart(monthOffset: number) {
@@ -124,8 +170,9 @@ export default function RequestsPage() {
 
 function RequestsContent() {
   const { t } = useI18n();
+  const [todayKey] = useState(getClientDateKey);
   const [monthOffset, setMonthOffset] = useState(initialMonthOffset);
-  const [requests, setRequests] = useState<Record<string, RequestShiftCode>>({});
+  const [requests, setRequests] = useState<Record<string, RequestShiftCode>>(demoRequestHistory);
   const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null);
   const [draftSelection, setDraftSelection] = useState<RequestShiftCode>("none");
   const [message, setMessage] = useState("");
@@ -134,6 +181,11 @@ function RequestsContent() {
   const monthStart = useMemo(() => getMonthStart(monthOffset), [monthOffset]);
   const calendarDays = useMemo(() => getCalendarDays(monthStart), [monthStart]);
   const monthLabel = getMonthLabel(monthStart);
+  const selectedMeta = selectedDateKey ? getRequestMeta(requests[selectedDateKey] ?? "none") : null;
+  const selectedReport = selectedDateKey ? demoReports[selectedDateKey] : undefined;
+  const selectedIsReadOnly = selectedDateKey ? selectedDateKey < todayKey : false;
+  const monthEnd = new Date(Date.UTC(monthStart.getUTCFullYear(), monthStart.getUTCMonth() + 1, 0));
+  const isPastMonth = formatDateKey(monthEnd) < todayKey;
 
   function openDay(dateKey: string) {
     setSelectedDateKey(dateKey);
@@ -141,7 +193,7 @@ function RequestsContent() {
   }
 
   function saveSelection() {
-    if (!selectedDateKey) {
+    if (!selectedDateKey || selectedDateKey < todayKey) {
       return;
     }
     setRequests((current) => ({ ...current, [selectedDateKey]: draftSelection }));
@@ -224,7 +276,8 @@ function RequestsContent() {
           onChange={(event) => setMessage(event.target.value)}
           placeholder={t("requests.shiftRequestMessagePlaceholder")}
           rows={3}
-          className="mt-2 w-full rounded-lg border border-slate-200 px-2 py-2 text-sm text-slate-900"
+          readOnly={isPastMonth}
+          className="mt-2 w-full rounded-lg border border-slate-200 px-2 py-2 text-sm text-slate-900 read-only:bg-slate-50 read-only:text-slate-500"
         />
       </label>
 
@@ -233,12 +286,13 @@ function RequestsContent() {
       <button
         type="button"
         onClick={submitRequests}
-        className="h-11 w-full rounded-lg bg-emerald-800 text-sm font-bold text-white shadow-sm"
+        disabled={isPastMonth}
+        className="h-11 w-full rounded-lg bg-emerald-800 text-sm font-bold text-white shadow-sm disabled:cursor-default disabled:opacity-50"
       >
         {t("requests.submitShiftRequests")}
       </button>
 
-      {selectedDateKey ? (
+      {selectedDateKey && selectedMeta ? (
         <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
           <button
             type="button"
@@ -247,47 +301,91 @@ function RequestsContent() {
             onClick={() => setSelectedDateKey(null)}
           />
           <div className="relative w-full max-w-[430px] rounded-t-xl bg-white p-4 shadow-xl sm:rounded-xl">
-            <h2 className="text-base font-bold text-slate-950">
-              {t("requests.selectShiftForDate").replace("{date}", formatModalDate(selectedDateKey))}
-            </h2>
+            <div className="flex items-start justify-between gap-2">
+              <h2 className="text-base font-bold text-slate-950">
+                {t("requests.selectShiftForDate").replace("{date}", formatModalDate(selectedDateKey))}
+              </h2>
+              {selectedIsReadOnly ? (
+                <span className="shrink-0 rounded-full bg-slate-100 px-2 py-1 text-[11px] font-bold text-slate-600">{t("requests.readOnly")}</span>
+              ) : null}
+            </div>
 
-            <div className="mt-3 space-y-1.5">
-              {requestOptions.map((option) => {
-                const meta = getRequestMeta(option);
-                return (
-                  <button
-                    key={option}
-                    type="button"
-                    onClick={() => setDraftSelection(option)}
-                    className={`flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left ${
-                      draftSelection === option ? "border-emerald-600 bg-emerald-50" : "border-slate-200 bg-white"
-                    }`}
-                  >
-                    <span className={`inline-flex min-w-9 justify-center rounded border px-1 py-0.5 text-xs font-bold ${meta.className}`}>
-                      {meta.marker}
+            {selectedIsReadOnly ? (
+              <div className="mt-3 space-y-3">
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-xs font-bold text-slate-500">{t("requests.pastRecord")}</p>
+                  <div className="mt-2 flex items-center gap-2">
+                    <span className={`inline-flex min-w-9 justify-center rounded border px-1 py-0.5 text-xs font-bold ${selectedMeta.className}`}>
+                      {selectedMeta.marker}
                     </span>
-                    <span className="text-sm font-semibold text-slate-800">{t(optionLabelKey(option))}</span>
-                  </button>
-                );
-              })}
-            </div>
+                    <span className="text-sm font-bold text-slate-900">{selectedMeta.detail || selectedMeta.label}</span>
+                  </div>
+                </div>
 
-            <div className="mt-4 grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => setSelectedDateKey(null)}
-                className="h-10 rounded-lg border border-slate-200 bg-white text-sm font-bold text-slate-700"
-              >
-                {t("requests.cancel")}
-              </button>
-              <button
-                type="button"
-                onClick={saveSelection}
-                className="h-10 rounded-lg bg-emerald-800 text-sm font-bold text-white"
-              >
-                {t("requests.save")}
-              </button>
-            </div>
+                {selectedReport ? (
+                  <div className="rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-700">
+                    <p className="text-xs font-bold text-slate-500">{t("requests.demoReport")}</p>
+                    <div className="mt-2 grid grid-cols-2 gap-2">
+                      <p>{t("requests.plannedShift")}: <span className="font-bold">{getRequestMeta(selectedReport.plannedShift).marker}</span></p>
+                      <p>{t("requests.actualHours")}: <span className="font-bold">{selectedReport.actualHours}</span></p>
+                      <p>{t("requests.start")}: <span className="font-bold">{selectedReport.start}</span></p>
+                      <p>{t("requests.end")}: <span className="font-bold">{selectedReport.end}</span></p>
+                      <p>{t("requests.break")}: <span className="font-bold">{selectedReport.breakMinutes}分</span></p>
+                      <p>{t("requests.transportation")}: <span className="font-bold">{selectedReport.transportation}円</span></p>
+                      <p className="col-span-2">{t("requests.message")}: {selectedReport.message}</p>
+                    </div>
+                  </div>
+                ) : null}
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedDateKey(null)}
+                  className="h-10 w-full rounded-lg border border-slate-200 bg-white text-sm font-bold text-slate-700"
+                >
+                  {t("requests.close")}
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="mt-3 space-y-1.5">
+                  {requestOptions.map((option) => {
+                    const meta = getRequestMeta(option);
+                    return (
+                      <button
+                        key={option}
+                        type="button"
+                        onClick={() => setDraftSelection(option)}
+                        className={`flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left ${
+                          draftSelection === option ? "border-emerald-600 bg-emerald-50" : "border-slate-200 bg-white"
+                        }`}
+                      >
+                        <span className={`inline-flex min-w-9 justify-center rounded border px-1 py-0.5 text-xs font-bold ${meta.className}`}>
+                          {meta.marker}
+                        </span>
+                        <span className="text-sm font-semibold text-slate-800">{t(optionLabelKey(option))}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="mt-4 grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedDateKey(null)}
+                    className="h-10 rounded-lg border border-slate-200 bg-white text-sm font-bold text-slate-700"
+                  >
+                    {t("requests.cancel")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={saveSelection}
+                    className="h-10 rounded-lg bg-emerald-800 text-sm font-bold text-white"
+                  >
+                    {t("requests.save")}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       ) : null}
