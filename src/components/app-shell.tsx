@@ -18,7 +18,7 @@ export default function AppShell({
   showMobileNav?: boolean;
 }) {
   const widthClass = variant === "wide" ? "max-w-6xl px-3 sm:px-5 md:px-6" : "max-w-[430px] px-3 sm:px-4";
-  const bottomPadding = showMobileNav ? "pb-24" : "pb-6";
+  const bottomPadding = showMobileNav ? "pb-24" : "pb-20";
 
   return (
     <I18nProvider>
@@ -42,8 +42,8 @@ export default function AppShell({
               <LanguageSwitcher />
             </div>
           </header>
-          {!showMobileNav ? <ManagerNav /> : null}
           <main className="flex-1">{children}</main>
+          {!showMobileNav ? <ManagerNav /> : null}
           {showMobileNav ? <MobileNav /> : null}
         </div>
       </div>

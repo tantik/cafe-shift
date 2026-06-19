@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState, type WheelEvent } from "react";
 import AppShell from "@/components/app-shell";
 import { useI18n } from "@/lib/i18n/use-i18n";
 
@@ -14,6 +14,7 @@ type Employee = {
 type Day = {
   key: string;
   date: string;
+  month: number;
   weekday: string;
 };
 
@@ -63,6 +64,7 @@ const weeks = weekStarts.map((startDay, weekIndex) => {
     return {
       key: `2026-${String(month).padStart(2, "0")}-${String(date).padStart(2, "0")}`,
       date: `${month}/${date}`,
+      month,
       weekday: weekdays[index],
     };
   });
@@ -205,6 +207,8 @@ function ManagerContent() {
   const [success, setSuccess] = useState("");
   const [isDraftGenerated, setIsDraftGenerated] = useState(false);
   const [isMissingRequestsOpen, setIsMissingRequestsOpen] = useState(false);
+  const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
+  const wheelLockRef = useRef(false);
   const selectedWeek = weeks[selectedWeekIndex];
 
   const selectedEmployee = selectedCell ? employees.find((employee) => employee.id === selectedCell.employeeId) : undefined;
@@ -269,6 +273,41 @@ function ManagerContent() {
     applyDraft();
   }
 
+  function changeWeek(direction: -1 | 1) {
+    setSelectedWeekIndex((current) => Math.min(weeks.length - 1, Math.max(0, current + direction)));
+  }
+
+  function handleCalendarWheel(event: WheelEvent<HTMLDivElement>) {
+    const horizontalDelta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.shiftKey ? event.deltaY : 0;
+    if (Math.abs(horizontalDelta) < 24 || wheelLockRef.current) {
+      return;
+    }
+    event.preventDefault();
+    wheelLockRef.current = true;
+    changeWeek(horizontalDelta > 0 ? 1 : -1);
+    window.setTimeout(() => {
+      wheelLockRef.current = false;
+    }, 450);
+  }
+
+  function handleSwipeStart(clientX: number, clientY: number) {
+    swipeStartRef.current = { x: clientX, y: clientY };
+  }
+
+  function handleSwipeEnd(clientX: number, clientY: number) {
+    const start = swipeStartRef.current;
+    swipeStartRef.current = null;
+    if (!start) {
+      return;
+    }
+    const deltaX = clientX - start.x;
+    const deltaY = clientY - start.y;
+    if (Math.abs(deltaX) < 50 || Math.abs(deltaX) < Math.abs(deltaY) * 1.4) {
+      return;
+    }
+    changeWeek(deltaX < 0 ? 1 : -1);
+  }
+
   return (
     <div className="space-y-3 pb-2">
       <section className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
@@ -276,18 +315,18 @@ function ManagerContent() {
           <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-1.5">
             <button
               type="button"
-              onClick={() => setSelectedWeekIndex((current) => Math.max(0, current - 1))}
+              onClick={() => changeWeek(-1)}
               disabled={selectedWeekIndex === 0}
-              className="rounded-lg border border-slate-200 bg-white px-2 py-2 text-[11px] font-semibold text-slate-700 shadow-sm disabled:opacity-40"
+              className="cursor-pointer rounded-lg border border-slate-200 bg-white px-2 py-2 text-[11px] font-semibold text-slate-700 shadow-sm disabled:cursor-default disabled:opacity-40"
             >
               {t("manager.previousWeek")}
             </button>
             <span className="min-w-[116px] text-center text-xs font-bold text-slate-950">{selectedWeek.range}</span>
             <button
               type="button"
-              onClick={() => setSelectedWeekIndex((current) => Math.min(weeks.length - 1, current + 1))}
+              onClick={() => changeWeek(1)}
               disabled={selectedWeekIndex === weeks.length - 1}
-              className="rounded-lg border border-slate-200 bg-white px-2 py-2 text-[11px] font-semibold text-slate-700 shadow-sm disabled:opacity-40"
+              className="cursor-pointer rounded-lg border border-slate-200 bg-white px-2 py-2 text-[11px] font-semibold text-slate-700 shadow-sm disabled:cursor-default disabled:opacity-40"
             >
               {t("manager.nextWeek")}
             </button>
@@ -303,19 +342,30 @@ function ManagerContent() {
         {isDraftGenerated ? <p className="mt-2 inline-flex rounded-md bg-amber-50 px-2 py-1 text-xs font-bold text-amber-800">{t("manager.shiftDraft")}</p> : null}
         {success ? <p className="mt-2 rounded-lg bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800">{success}</p> : null}
 
-        <div className="mt-3">
+        <div
+          className="mt-3 touch-pan-y"
+          onWheel={handleCalendarWheel}
+          onPointerDown={(event) => handleSwipeStart(event.clientX, event.clientY)}
+          onPointerUp={(event) => handleSwipeEnd(event.clientX, event.clientY)}
+          onPointerCancel={() => {
+            swipeStartRef.current = null;
+          }}
+        >
           <table className="w-full table-fixed border-separate border-spacing-0 text-center text-[10px]">
             <thead>
               <tr>
                 <th className="w-[18%] border-b border-r border-slate-200 bg-slate-50 px-1 py-1.5 text-left text-[10px] font-bold text-slate-600 sm:text-[11px]">
                   {t("manager.shiftOverview.employee")}
                 </th>
-                {selectedWeek.days.map((day) => (
-                  <th key={day.key} className="border-b border-r border-slate-200 bg-white px-0.5 py-1 text-[9px] font-bold text-slate-600 sm:text-[10px]">
+                {selectedWeek.days.map((day, index) => {
+                  const isMonthStart = index > 0 && day.month !== selectedWeek.days[index - 1].month;
+                  return (
+                  <th key={day.key} className={`border-b border-r border-slate-200 bg-white px-0.5 py-1 text-[9px] font-bold text-slate-600 sm:text-[10px] ${isMonthStart ? "border-l-4 border-l-rose-500 bg-rose-50" : ""}`}>
                     <span className="block">{day.date}</span>
                     <span className="block text-[9px]">{day.weekday}</span>
                   </th>
-                ))}
+                  );
+                })}
                 <th className="w-[9%] border-b border-r border-slate-200 bg-slate-50 px-0.5 py-1 text-[9px] font-bold text-slate-600 sm:text-[10px]">
                   {t("manager.weekPlanned")}
                 </th>
@@ -335,7 +385,12 @@ function ManagerContent() {
                     const meta = shiftMeta[shift];
                     const hasReport = Boolean(reportByCell[reportKey(row.employee.id, day.key)]);
                     return (
-                      <td key={`${row.employee.id}-${day.key}`} className="border-b border-r border-slate-100 bg-white px-0.5 py-1">
+                      <td
+                        key={`${row.employee.id}-${day.key}`}
+                        className={`border-b border-r border-slate-100 bg-white px-0.5 py-1 ${
+                          index > 0 && day.month !== selectedWeek.days[index - 1].month ? "border-l-4 border-l-rose-500 bg-rose-50/40" : ""
+                        }`}
+                      >
                         <button
                           type="button"
                           onClick={() => openCell(row.employee.id, day.key)}
