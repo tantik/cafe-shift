@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
 import AppShell from "@/components/app-shell";
 import { useI18n } from "@/lib/i18n/use-i18n";
 
@@ -32,6 +31,8 @@ type SelectedCell = {
   employeeId: string;
   dayKey: string;
 };
+
+const todayKey = "2026-06-19";
 
 const employees: Employee[] = [
   { id: "manabu", name: "まなぶ" },
@@ -167,10 +168,13 @@ function formatHours(hours: number) {
 }
 
 // Demo auto-generation. Production should consider staffing rules, max hours, vacations, fairness, and required headcount.
-function buildDraftFromRequests(current: Record<string, Record<string, ShiftCode>>) {
+function buildDraftFromRequests(current: Record<string, Record<string, ShiftCode>>, excludedEmployeeIds: string[] = []) {
   const next = structuredClone(current);
   const draftPattern: ShiftCode[] = ["shift_1", "shift_2", "none", "full_day", "vacation", "shift_3", "none"];
   for (const employee of employees) {
+    if (excludedEmployeeIds.includes(employee.id)) {
+      continue;
+    }
     for (const week of weeks) {
       for (const day of week.days) {
         next[employee.id][day.key] = draftPattern[(employees.indexOf(employee) + Number(day.key.slice(-2))) % draftPattern.length];
@@ -182,11 +186,7 @@ function buildDraftFromRequests(current: Record<string, Record<string, ShiftCode
 
 const reportByCell = Object.fromEntries(reports.map((report) => [reportKey(report.employeeId, report.workDate), report]));
 
-const managementLinks = [
-  { href: "/manager/employees", labelKey: "manager.staff" },
-  { href: "/manager/recipes", labelKey: "manager.recipes" },
-  { href: "/manager/settings", labelKey: "manager.settings" },
-];
+const missingRequestEmployeeIds = ["cons", "maria"];
 
 export default function ManagerPage() {
   return (
@@ -203,21 +203,25 @@ function ManagerContent() {
   const [selectedCell, setSelectedCell] = useState<SelectedCell | null>(null);
   const [draftShift, setDraftShift] = useState<ShiftCode>("none");
   const [success, setSuccess] = useState("");
+  const [isDraftGenerated, setIsDraftGenerated] = useState(false);
+  const [isMissingRequestsOpen, setIsMissingRequestsOpen] = useState(false);
   const selectedWeek = weeks[selectedWeekIndex];
 
   const selectedEmployee = selectedCell ? employees.find((employee) => employee.id === selectedCell.employeeId) : undefined;
   const selectedDay = selectedCell ? selectedWeek.days.find((day) => day.key === selectedCell.dayKey) : undefined;
   const selectedReport = selectedCell ? reportByCell[reportKey(selectedCell.employeeId, selectedCell.dayKey)] : undefined;
+  const selectedIsPast = selectedCell ? selectedCell.dayKey < todayKey : false;
+  const selectedIsReportOnly = selectedIsPast || Boolean(selectedReport);
+  const missingRequestEmployees = employees.filter((employee) => missingRequestEmployeeIds.includes(employee.id));
 
   const weekRows = useMemo(
     () =>
       employees.map((employee) => {
         const weekShifts = selectedWeek.days.map((day) => schedule[employee.id][day.key] ?? "none");
         const planned = weekShifts.reduce((total, shift) => total + shiftMeta[shift].hours, 0);
-        const actual = selectedWeek.days.reduce((total, day) => {
-          const report = reportByCell[reportKey(employee.id, day.key)];
-          return total + (report ? reportHours(report) : 0);
-        }, 0);
+        const actual = reports
+          .filter((report) => report.employeeId === employee.id && report.workDate.startsWith("2026-06"))
+          .reduce((total, report) => total + reportHours(report), 0);
         return { employee, weekShifts, planned, actual };
       }),
     [schedule, selectedWeek],
@@ -242,9 +246,27 @@ function ManagerContent() {
     setSelectedCell(null);
   }
 
-  function generateDraft() {
-    setSchedule((current) => buildDraftFromRequests(current));
+  function applyDraft(excludedEmployeeIds: string[] = []) {
+    setSchedule((current) => buildDraftFromRequests(current, excludedEmployeeIds));
+    setSelectedWeekIndex(4);
+    setIsDraftGenerated(true);
     setSuccess(t("manager.generatedDraftSuccess"));
+    setIsMissingRequestsOpen(false);
+  }
+
+  function handleDraftAction() {
+    if (isDraftGenerated) {
+      setIsDraftGenerated(false);
+      setSuccess(t("manager.calendarConfirmed"));
+      return;
+    }
+
+    if (missingRequestEmployees.length > 0) {
+      setIsMissingRequestsOpen(true);
+      return;
+    }
+
+    applyDraft();
   }
 
   return (
@@ -272,39 +294,40 @@ function ManagerContent() {
           </div>
           <button
             type="button"
-            onClick={generateDraft}
+            onClick={handleDraftAction}
             className="rounded-lg bg-emerald-800 px-3 py-2 text-sm font-bold text-white shadow-sm"
           >
-            {t("manager.generateFromRequests")}
+            {isDraftGenerated ? t("manager.confirmNextMonthCalendar") : t("manager.generateFromRequests")}
           </button>
         </div>
+        {isDraftGenerated ? <p className="mt-2 inline-flex rounded-md bg-amber-50 px-2 py-1 text-xs font-bold text-amber-800">{t("manager.shiftDraft")}</p> : null}
         {success ? <p className="mt-2 rounded-lg bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800">{success}</p> : null}
 
-        <div className="mt-3 overflow-x-auto">
-          <table className="min-w-[880px] border-separate border-spacing-0 text-center text-[10px]">
+        <div className="mt-3">
+          <table className="w-full table-fixed border-separate border-spacing-0 text-center text-[10px]">
             <thead>
               <tr>
-                <th className="w-24 border-b border-r border-slate-200 bg-slate-50 px-2 py-1.5 text-left text-[11px] font-bold text-slate-600">
+                <th className="w-[18%] border-b border-r border-slate-200 bg-slate-50 px-1 py-1.5 text-left text-[10px] font-bold text-slate-600 sm:text-[11px]">
                   {t("manager.shiftOverview.employee")}
                 </th>
                 {selectedWeek.days.map((day) => (
-                  <th key={day.key} className="border-b border-r border-slate-200 bg-white px-1 py-1 text-[10px] font-bold text-slate-600">
+                  <th key={day.key} className="border-b border-r border-slate-200 bg-white px-0.5 py-1 text-[9px] font-bold text-slate-600 sm:text-[10px]">
                     <span className="block">{day.date}</span>
                     <span className="block text-[9px]">{day.weekday}</span>
                   </th>
                 ))}
-                <th className="w-16 border-b border-r border-slate-200 bg-slate-50 px-1 py-1 text-[10px] font-bold text-slate-600">
+                <th className="w-[9%] border-b border-r border-slate-200 bg-slate-50 px-0.5 py-1 text-[9px] font-bold text-slate-600 sm:text-[10px]">
                   {t("manager.weekPlanned")}
                 </th>
-                <th className="w-16 border-b border-slate-200 bg-slate-50 px-1 py-1 text-[10px] font-bold text-slate-600">
-                  {t("manager.weekActual")}
+                <th className="w-[9%] border-b border-l-2 border-slate-300 bg-slate-50 px-0.5 py-1 text-[9px] font-bold text-slate-600 sm:text-[10px]">
+                  {t("manager.actualMonthly")}
                 </th>
               </tr>
             </thead>
             <tbody>
               {weekRows.map((row) => (
                 <tr key={`${selectedWeek.key}-${row.employee.id}`}>
-                  <th className="border-b border-r border-slate-100 bg-white px-2 py-1.5 text-left text-[11px] font-bold text-slate-800">
+                  <th className="truncate border-b border-r border-slate-100 bg-white px-1 py-1.5 text-left text-[10px] font-bold text-slate-800 sm:text-[11px]">
                     {row.employee.name}
                   </th>
                   {row.weekShifts.map((shift, index) => {
@@ -316,20 +339,20 @@ function ManagerContent() {
                         <button
                           type="button"
                           onClick={() => openCell(row.employee.id, day.key)}
-                          className={`inline-flex h-7 w-full min-w-10 items-center justify-center rounded border px-1 text-[10px] font-bold ${meta.className} ${
+                          className={`inline-flex h-7 w-full min-w-0 items-center justify-center rounded-md border px-0.5 text-[10px] font-bold ${meta.className} ${
                             hasReport ? "ring-1 ring-emerald-500" : ""
                           }`}
                         >
                           <span>{meta.label}</span>
-                          {meta.time ? <span className="ml-1 hidden text-[9px] font-semibold md:inline">{meta.time}</span> : null}
+                          {meta.time ? <span className="ml-1 hidden truncate text-[9px] font-semibold xl:inline">{meta.time}</span> : null}
                         </button>
                       </td>
                     );
                   })}
-                  <td className="border-b border-r border-slate-100 bg-white px-1 py-1 text-[11px] font-bold text-slate-800">
+                  <td className="border-b border-r border-slate-100 bg-white px-0.5 py-1 text-[10px] font-bold text-slate-800 sm:text-[11px]">
                     {formatHours(row.planned)}
                   </td>
-                  <td className="border-b border-slate-100 bg-white px-1 py-1 text-[11px] font-bold text-emerald-800">
+                  <td className="border-b border-l-2 border-slate-300 bg-white px-0.5 py-1 text-[10px] font-bold text-emerald-800 sm:text-[11px]">
                     {formatHours(row.actual)}
                   </td>
                 </tr>
@@ -339,24 +362,12 @@ function ManagerContent() {
         </div>
       </section>
 
-      <nav className="grid grid-cols-3 gap-2">
-        {managementLinks.map((link) => (
-          <Link
-            key={link.href}
-            href={link.href}
-            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-center text-sm font-bold text-slate-800 shadow-sm hover:border-emerald-300"
-          >
-            {t(link.labelKey)}
-          </Link>
-        ))}
-      </nav>
-
       {selectedCell && selectedEmployee && selectedDay ? (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/35 p-3 sm:items-center">
           <section className="w-full max-w-md rounded-xl bg-white p-4 shadow-xl" role="dialog" aria-modal="true">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h2 className="text-base font-bold text-slate-950">{t("manager.cellEditTitle")}</h2>
+                <h2 className="text-base font-bold text-slate-950">{selectedIsReportOnly ? t("manager.workReport") : t("manager.shiftEdit")}</h2>
                 <p className="mt-0.5 text-sm font-semibold text-slate-600">
                   {selectedEmployee.name} / {selectedDay.date}（{selectedDay.weekday}）
                 </p>
@@ -366,27 +377,14 @@ function ManagerContent() {
               </button>
             </div>
 
-            <div className="mt-4">
-              <p className="text-xs font-bold text-slate-700">{t("manager.plannedShift")}</p>
-              <div className="mt-2 grid grid-cols-4 gap-1.5">
-                {editableShiftCodes.map((code) => (
-                  <button
-                    key={code}
-                    type="button"
-                    onClick={() => setDraftShift(code)}
-                    className={`rounded-lg border px-2 py-2 text-xs font-bold ${
-                      draftShift === code ? "border-emerald-700 bg-emerald-50 text-emerald-900" : "border-slate-200 bg-white text-slate-700"
-                    }`}
-                  >
-                    {shiftMeta[code].label}
-                  </button>
-                ))}
-              </div>
-            </div>
+            <p className="mt-4 text-xs font-bold text-slate-700">
+              {t("manager.plannedShift")}: <span className="text-slate-950">{shiftMeta[schedule[selectedCell.employeeId][selectedCell.dayKey] ?? "none"].label}</span>
+            </p>
 
-            <div className="mt-4 rounded-lg bg-slate-50 p-3">
-              <h3 className="text-sm font-bold text-slate-950">{t("manager.actualReport")}</h3>
-              {selectedReport ? (
+            {selectedIsReportOnly ? (
+              <div className="mt-3 rounded-lg bg-slate-50 p-3">
+                <h3 className="text-sm font-bold text-slate-950">{t("manager.workReport")}</h3>
+                {selectedReport ? (
                 <div className="mt-2 grid grid-cols-2 gap-2 text-sm text-slate-700">
                   <p>{t("manager.workStart")}: <span className="font-bold">{selectedReport.startedAt}</span></p>
                   <p>{t("manager.workEnd")}: <span className="font-bold">{selectedReport.endedAt}</span></p>
@@ -395,14 +393,58 @@ function ManagerContent() {
                   <p>{t("manager.transportation")}: <span className="font-bold">{selectedReport.transportationCost}円</span></p>
                   {selectedReport.message ? <p className="col-span-2">{t("manager.reportMessage")}: {selectedReport.message}</p> : null}
                 </div>
-              ) : (
-                <p className="mt-2 text-sm font-semibold text-slate-500">{t("manager.noReport")}</p>
-              )}
-            </div>
+                ) : (
+                  <p className="mt-2 text-sm font-semibold text-slate-500">{t("manager.noReport")}</p>
+                )}
+              </div>
+            ) : (
+              <>
+                <div className="mt-4">
+                  <p className="text-xs font-bold text-slate-700">{t("manager.shiftEdit")}</p>
+                  <div className="mt-2 grid grid-cols-4 gap-1.5">
+                    {editableShiftCodes.map((code) => (
+                      <button
+                        key={code}
+                        type="button"
+                        onClick={() => setDraftShift(code)}
+                        className={`rounded-lg border px-2 py-2 text-xs font-bold ${
+                          draftShift === code ? "border-emerald-700 bg-emerald-50 text-emerald-900" : "border-slate-200 bg-white text-slate-700"
+                        }`}
+                      >
+                        {shiftMeta[code].label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <button type="button" onClick={saveCell} className="mt-4 h-10 w-full rounded-lg bg-emerald-800 text-sm font-bold text-white">
+                  {t("manager.save")}
+                </button>
+              </>
+            )}
+          </section>
+        </div>
+      ) : null}
 
-            <button type="button" onClick={saveCell} className="mt-4 h-10 w-full rounded-lg bg-emerald-800 text-sm font-bold text-white">
-              {t("manager.save")}
-            </button>
+      {isMissingRequestsOpen ? (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/35 p-3 sm:items-center">
+          <section className="w-full max-w-md rounded-xl bg-white p-4 shadow-xl" role="dialog" aria-modal="true">
+            <h2 className="text-base font-bold text-slate-950">{t("manager.missingRequestsTitle")}</h2>
+            <p className="mt-2 text-sm text-slate-600">{t("manager.missingRequestsMessage")}</p>
+            <ul className="mt-3 space-y-1">
+              {missingRequestEmployees.map((employee) => (
+                <li key={employee.id} className="rounded-lg bg-slate-50 px-3 py-2 text-sm font-bold text-slate-700">
+                  {employee.name}
+                </li>
+              ))}
+            </ul>
+            <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <button type="button" onClick={() => applyDraft(missingRequestEmployeeIds)} className="rounded-lg bg-emerald-800 px-3 py-2 text-sm font-bold text-white">
+                {t("manager.createWithoutMissingStaff")}
+              </button>
+              <button type="button" onClick={() => setIsMissingRequestsOpen(false)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-700">
+                {t("manager.cancel")}
+              </button>
+            </div>
           </section>
         </div>
       ) : null}

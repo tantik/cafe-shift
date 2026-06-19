@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
 import AppShell from "@/components/app-shell";
 import { useI18n } from "@/lib/i18n/use-i18n";
 
@@ -21,74 +20,55 @@ type Recipe = {
 
 type RecipeDraft = Omit<Recipe, "id">;
 
-const initialRecipes: Recipe[] = [
-  {
-    id: 1,
-    title: "抹茶ラテ",
-    category: "ラテ",
-    description: "定番の抹茶ラテ",
-    photoMemo: "抹茶の色が見える正面写真",
-    ingredients: "牛乳160g\n抹茶液30g\nシロップ10g",
-    steps: "氷を入れます\n牛乳とシロップを注ぎます\n抹茶液を重ねます",
-    notes: "提供前によく混ぜる案内をします",
-    active: true,
-  },
-  {
-    id: 2,
-    title: "ほうじ茶ラテ",
-    category: "ラテ",
-    description: "香ばしい茶葉のミルクラテ",
-    photoMemo: "ラテアートが見える写真",
-    ingredients: "牛乳160g\nほうじ茶液30g\nシロップ10g",
-    steps: "材料を計量します\n氷と牛乳を入れます\nほうじ茶液を注ぎます",
-    notes: "",
-    active: true,
-  },
-  {
-    id: 3,
-    title: "煎茶",
-    category: "日本茶",
-    description: "すっきりした定番の温かい煎茶",
-    photoMemo: "急須と湯呑みの写真",
-    ingredients: "煎茶葉5g\n湯180ml",
-    steps: "湯温を整えます\n茶葉を蒸らします\n均等に注ぎます",
-    notes: "",
-    active: true,
-  },
-  {
-    id: 4,
-    title: "玄米茶",
-    category: "日本茶",
-    description: "香ばしさを楽しむ温かいお茶",
-    photoMemo: "玄米茶の湯気が見える写真",
-    ingredients: "玄米茶葉5g\n湯180ml",
-    steps: "茶葉を入れます\n熱湯を注ぎます\n短時間で抽出します",
-    notes: "",
-    active: true,
-  },
-  {
-    id: 5,
-    title: "和紅茶",
-    category: "紅茶",
-    description: "やわらかな香りの国産紅茶",
-    photoMemo: "",
-    ingredients: "和紅茶葉4g\n湯200ml",
-    steps: "抽出時間を確認します\n温めたカップへ注ぎます",
-    notes: "写真撮影後に公開予定",
-    active: false,
-  },
-  {
-    id: 6,
-    title: "季節のアイスティー",
-    category: "季節",
-    description: "夏向けの爽やかな限定ドリンク",
-    photoMemo: "",
-    ingredients: "紅茶液120g\n季節のシロップ15g\n氷",
-    steps: "グラスに氷を入れます\n材料を注ぎます\n飾りを添えます",
-    notes: "提供時期を確認",
-    active: false,
-  },
-];
+const menuRecipeItems = [
+  ["抹茶ラテ", "Ceremonia"],
+  ["サクラ抹茶ラテフロート", "Ceremonia"],
+  ["ピュア抹茶", "Ceremonia"],
+  ["ストロベリー抹茶ラテ", "Ceremonia"],
+  ["ゴールドパウダー抹茶ラテ", "Ceremonia"],
+  ["マンゴー抹茶ラテ", "Summer Special"],
+  ["ラズベリー＆パッションフルーツ抹茶ラテ", "Summer Special"],
+  ["抹茶クラウド ココナッツウォーター", "Summer Special"],
+  ["抹茶ソーダ", "Summer Special"],
+  ["抹茶ソーダフロート", "Summer Special"],
+  ["サクラ抹茶ラテ ココナッツフロート", "Summer Special"],
+  ["ほうじ茶ラテ", "Hojicha"],
+  ["ピュアほうじ茶", "Hojicha"],
+  ["ほうじ茶チョコラテ", "Hojicha"],
+  ["ストロベリーほうじ茶チョコラテ", "Hojicha"],
+  ["コーヒー", "Coffee & Other"],
+  ["エスプレッソ", "Coffee & Other"],
+  ["カフェラテ", "Coffee & Other"],
+  ["オレンジジュース", "Coffee & Other"],
+  ["ストロベリーミルク", "Coffee & Other"],
+  ["ジャスミンティー", "Coffee & Other"],
+  ["フルーツソーダ", "Coffee & Other"],
+  ["生ビール", "Coffee & Other"],
+  ["抹茶アイス", "Ice Cream"],
+  ["バニラアイス", "Ice Cream"],
+  ["ココナッツミルクアイス", "Ice Cream"],
+  ["ソイアイス", "Ice Cream"],
+  ["豆と茶セット", "Japanese Sweets"],
+  ["お団子セット", "Japanese Sweets"],
+  ["わらび餅", "Japanese Sweets"],
+  ["Oat Milk", "Option"],
+  ["Soy Milk", "Option"],
+  ["Almond Milk", "Option"],
+  ["Coconut Milk", "Option"],
+  ["Ice Cream Option", "Option"],
+] satisfies [string, string][];
+
+const initialRecipes: Recipe[] = menuRecipeItems.map(([title, category], index) => ({
+  id: index + 1,
+  title,
+  category,
+  description: `${title}のスタッフ用デモレシピ。`,
+  photoMemo: "",
+  ingredients: "材料は公式レシピに合わせて更新してください",
+  steps: "カップを準備します\n材料を計量します\n仕上がりを確認して提供します",
+  notes: "デモデータです",
+  active: true,
+}));
 
 const emptyDraft: RecipeDraft = {
   title: "",
@@ -180,10 +160,8 @@ function ManagerRecipesContent() {
     setEditorOpen(false);
   }
 
-  function toggleStatus(id: number) {
-    setRecipes((current) =>
-      current.map((recipe) => (recipe.id === id ? { ...recipe, active: !recipe.active } : recipe)),
-    );
+  function deleteRecipe(id: number) {
+    setRecipes((current) => current.filter((recipe) => recipe.id !== id));
   }
 
   return (
@@ -278,23 +256,15 @@ function ManagerRecipesContent() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => toggleStatus(recipe.id)}
-                    className="rounded-lg border border-amber-200 bg-white px-3 py-1.5 text-sm font-semibold text-amber-800"
+                    onClick={() => deleteRecipe(recipe.id)}
+                    className="rounded-lg border border-rose-200 bg-white px-3 py-1.5 text-sm font-semibold text-rose-700"
                   >
-                    {recipe.active ? t("managerRecipes.makeDraft") : t("managerRecipes.publish")}
+                    {t("manager.deleteRecipe")}
                   </button>
                 </div>
               </article>
             ))
           )}
-        </section>
-
-        <section className="rounded-2xl border border-emerald-100 bg-emerald-50/60 p-4 shadow-sm">
-          <p className="font-semibold text-slate-900">{t("managerRecipes.staffRelationTitle")}</p>
-          <p className="mt-1 text-sm text-slate-600">{t("managerRecipes.staffRelationText")}</p>
-          <Link href="/recipes" className="mt-3 inline-flex text-sm font-semibold text-emerald-800 hover:text-emerald-950">
-            {t("managerRecipes.openWorkerRecipes")}
-          </Link>
         </section>
 
         <p className="rounded-2xl border border-slate-200 bg-white/90 px-4 py-3 text-sm text-slate-600 shadow-sm">
