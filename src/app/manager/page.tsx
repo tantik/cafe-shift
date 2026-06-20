@@ -126,6 +126,15 @@ const reports: WorkReport[] = [
     breakMinutes: 0,
     transportationCost: 300,
   },
+  {
+    employeeId: "cons",
+    workDate: "2026-06-18",
+    startedAt: "08:32",
+    endedAt: "17:05",
+    breakMinutes: 60,
+    transportationCost: 250,
+    message: "本日の業務は問題ありませんでした。",
+  },
 ];
 
 function buildInitialSchedule() {
@@ -172,6 +181,23 @@ function formatHours(hours: number) {
   return `${Number.isInteger(hours) ? hours : hours.toFixed(1)}h`;
 }
 
+function formatReportDuration(report: WorkReport) {
+  const minutes = Math.round(reportHours(report) * 60);
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  return `${hours}時間${String(remainingMinutes).padStart(2, "0")}分`;
+}
+
+function formatJapaneseDate(dateKey: string) {
+  const [, month, day] = dateKey.split("-").map(Number);
+  return `2026年${month}月${day}日`;
+}
+
+function formatCorrectionNotice(request: AttendanceCorrectionRequest) {
+  const [, month, day] = request.date.split("-").map(Number);
+  return `${request.employeeName}さんから${month}月${day}日の勤務時間修正依頼があります。確認してください。`;
+}
+
 function csvValue(value: string | number) {
   const text = String(value);
   return `"${text.replaceAll('"', '""')}"`;
@@ -207,10 +233,10 @@ const demoCorrectionRequests: AttendanceCorrectionRequest[] = [
     employeeName: "Cons",
     date: "2026-06-18",
     requestedStartTime: "08:30",
-    requestedEndTime: "10:05",
-    requestedBreakMinutes: 0,
-    message: "退勤打刻を忘れたため、勤務時間の確認をお願いします。",
-    createdAt: "2026-06-18T10:20:00+09:00",
+    requestedEndTime: "17:30",
+    requestedBreakMinutes: 60,
+    message: "退勤ボタンを押し忘れました。実際は17:30まで勤務しました。",
+    createdAt: "2026-06-18T18:10:00+09:00",
     status: "pending",
   },
 ];
@@ -249,7 +275,7 @@ function ManagerContent() {
     () => Object.values(reportByCell).filter((report) => report.workDate.startsWith(monthlyReportMonth)),
     [reportByCell],
   );
-  const pendingCorrections = correctionRequests.filter((request) => request.status === "pending");
+  const pendingCorrections = correctionRequests.filter((request) => request.status === "pending" && request.date < todayKey);
 
   const selectedEmployee = selectedCell ? employees.find((employee) => employee.id === selectedCell.employeeId) : undefined;
   const selectedDay = selectedCell ? selectedWeek.days.find((day) => day.key === selectedCell.dayKey) : undefined;
@@ -258,6 +284,10 @@ function ManagerContent() {
     selectedCell && selectedEmployee
       ? pendingCorrections.find((request) => request.employeeName === selectedEmployee.name && request.date === selectedCell.dayKey)
       : undefined;
+  const selectedShift = selectedCell ? schedule[selectedCell.employeeId][selectedCell.dayKey] ?? "none" : "none";
+  const selectedPlannedShiftText = selectedCorrection
+    ? "3 / 08:30〜17:30"
+    : `${shiftMeta[selectedShift].label}${shiftMeta[selectedShift].time ? ` / ${shiftMeta[selectedShift].time}` : ""}`;
   const selectedIsPast = selectedCell ? selectedCell.dayKey < todayKey : false;
   const selectedIsReportOnly = selectedIsPast || Boolean(selectedReport) || Boolean(selectedCorrection);
   const missingRequestEmployees = employees.filter((employee) => missingRequestEmployeeIds.includes(employee.id));
@@ -293,7 +323,10 @@ function ManagerContent() {
           // Ignore malformed demo localStorage data.
         }
       }
-      setCorrectionRequests(nextRequests.length > 0 ? nextRequests : demoCorrectionRequests);
+      const hasDemoCorrection = nextRequests.some(
+        (request) => request.employeeName === "Cons" && request.date === "2026-06-18",
+      );
+      setCorrectionRequests(hasDemoCorrection ? nextRequests : [...demoCorrectionRequests, ...nextRequests]);
     }, 0);
     return () => window.clearTimeout(timer);
   }, []);
@@ -480,7 +513,11 @@ function ManagerContent() {
         {pendingCorrections.length > 0 ? (
           <div className="mt-2 rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-sm text-orange-900">
             <p className="font-bold">勤務時間の修正依頼があります</p>
-            <p className="mt-0.5 text-xs font-semibold">{pendingCorrections.length}件の修正依頼があります。確認してください。</p>
+            <p className="mt-0.5 text-xs font-semibold">
+              {pendingCorrections.length === 1
+                ? formatCorrectionNotice(pendingCorrections[0])
+                : `${pendingCorrections.length}件の修正依頼があります。確認してください。`}
+            </p>
           </div>
         ) : null}
 
@@ -590,7 +627,7 @@ function ManagerContent() {
               <div>
                 <h2 className="text-base font-bold text-slate-950">{selectedIsReportOnly ? t("manager.workReport") : t("manager.shiftEdit")}</h2>
                 <p className="mt-0.5 text-sm font-semibold text-slate-600">
-                  {selectedEmployee.name} / {selectedDay.date}（{selectedDay.weekday}）
+                  {selectedEmployee.name} / {formatJapaneseDate(selectedCell.dayKey)}
                 </p>
               </div>
               <button type="button" onClick={() => setSelectedCell(null)} className="rounded-lg px-2 py-1 text-sm text-slate-500">
@@ -599,66 +636,71 @@ function ManagerContent() {
             </div>
 
             <p className="mt-4 text-xs font-bold text-slate-700">
-              {t("manager.plannedShift")}: <span className="text-slate-950">{shiftMeta[schedule[selectedCell.employeeId][selectedCell.dayKey] ?? "none"].label}</span>
+              {t("manager.plannedShift")}: <span className="text-slate-950">{selectedPlannedShiftText}</span>
             </p>
 
-            {selectedCorrection ? (
-              <div className="mt-3 rounded-lg border border-orange-200 bg-orange-50 p-3 text-sm text-orange-950">
-                <h3 className="font-bold">勤務時間の修正依頼</h3>
-                <p className="mt-1 text-xs font-semibold">スタッフが勤務時間の修正を依頼しています。</p>
-                <dl className="mt-2 grid grid-cols-2 gap-2">
-                  <div>
-                    <dt className="text-[11px] font-bold text-orange-700">申請された出勤時間</dt>
-                    <dd className="font-bold">{selectedCorrection.requestedStartTime || "-"}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-[11px] font-bold text-orange-700">申請された退勤時間</dt>
-                    <dd className="font-bold">{selectedCorrection.requestedEndTime || "-"}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-[11px] font-bold text-orange-700">申請された休憩時間</dt>
-                    <dd className="font-bold">{selectedCorrection.requestedBreakMinutes}分</dd>
-                  </div>
-                  <div className="col-span-2">
-                    <dt className="text-[11px] font-bold text-orange-700">理由</dt>
-                    <dd className="font-semibold">{selectedCorrection.message || "-"}</dd>
-                  </div>
-                </dl>
-                <div className="mt-3 grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => approveCorrectionRequest(selectedCorrection)}
-                    className="rounded-lg bg-orange-700 px-3 py-2 text-sm font-bold text-white"
-                  >
-                    承認する
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedCell(null)}
-                    className="rounded-lg border border-orange-200 bg-white px-3 py-2 text-sm font-bold text-orange-800"
-                  >
-                    後で確認
-                  </button>
-                </div>
-              </div>
-            ) : null}
-
             {selectedIsReportOnly ? (
-              <div className="mt-3 rounded-lg bg-slate-50 p-3">
-                <h3 className="text-sm font-bold text-slate-950">{t("manager.workReport")}</h3>
-                {selectedReport ? (
-                <div className="mt-2 grid grid-cols-2 gap-2 text-sm text-slate-700">
-                  <p>{t("manager.workStart")}: <span className="font-bold">{selectedReport.startedAt}</span></p>
-                  <p>{t("manager.workEnd")}: <span className="font-bold">{selectedReport.endedAt}</span></p>
-                  <p>{t("manager.breakTime")}: <span className="font-bold">{selectedReport.breakMinutes}分</span></p>
-                  <p>{t("manager.actualHours")}: <span className="font-bold">{formatHours(reportHours(selectedReport))}</span></p>
-                  <p>{t("manager.transportation")}: <span className="font-bold">{selectedReport.transportationCost}円</span></p>
-                  {selectedReport.message ? <p className="col-span-2">{t("manager.reportMessage")}: {selectedReport.message}</p> : null}
+              <>
+                <div className="mt-3 rounded-lg bg-slate-50 p-3">
+                  <h3 className="text-sm font-bold text-slate-950">{t("manager.workReport")}</h3>
+                  {selectedReport ? (
+                    <div className="mt-2 grid grid-cols-2 gap-2 text-sm text-slate-700">
+                      <p className="col-span-2">
+                        予定シフト: <span className="font-bold">{selectedPlannedShiftText}</span>
+                      </p>
+                      <p>打刻 出勤: <span className="font-bold">{selectedReport.startedAt}</span></p>
+                      <p>打刻 退勤: <span className="font-bold">{selectedReport.endedAt}</span></p>
+                      <p>休憩: <span className="font-bold">{selectedReport.breakMinutes}分</span></p>
+                      <p>実働: <span className="font-bold">{formatReportDuration(selectedReport)}</span></p>
+                      <p>交通費: <span className="font-bold">¥{selectedReport.transportationCost.toLocaleString("ja-JP")}</span></p>
+                      {selectedReport.message ? <p className="col-span-2">メッセージ: {selectedReport.message}</p> : null}
+                    </div>
+                  ) : (
+                    <p className="mt-2 text-sm font-semibold text-slate-500">{t("manager.noReport")}</p>
+                  )}
                 </div>
-                ) : (
-                  <p className="mt-2 text-sm font-semibold text-slate-500">{t("manager.noReport")}</p>
-                )}
-              </div>
+
+                {selectedCorrection ? (
+                  <div className="mt-3 rounded-lg border border-orange-200 bg-orange-50 p-3 text-sm text-orange-950">
+                    <h3 className="font-bold">勤務時間の修正依頼</h3>
+                    <p className="mt-1 text-xs font-semibold">スタッフが勤務時間の修正を依頼しています。</p>
+                    <dl className="mt-2 grid grid-cols-2 gap-2">
+                      <div>
+                        <dt className="text-[11px] font-bold text-orange-700">申請された出勤時間</dt>
+                        <dd className="font-bold">{selectedCorrection.requestedStartTime || "-"}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-[11px] font-bold text-orange-700">申請された退勤時間</dt>
+                        <dd className="font-bold">{selectedCorrection.requestedEndTime || "-"}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-[11px] font-bold text-orange-700">申請された休憩時間</dt>
+                        <dd className="font-bold">{selectedCorrection.requestedBreakMinutes}分</dd>
+                      </div>
+                      <div className="col-span-2">
+                        <dt className="text-[11px] font-bold text-orange-700">理由</dt>
+                        <dd className="font-semibold">{selectedCorrection.message || "-"}</dd>
+                      </div>
+                    </dl>
+                    <div className="mt-3 grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => approveCorrectionRequest(selectedCorrection)}
+                        className="rounded-lg bg-orange-700 px-3 py-2 text-sm font-bold text-white"
+                      >
+                        承認する
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedCell(null)}
+                        className="rounded-lg border border-orange-200 bg-white px-3 py-2 text-sm font-bold text-orange-800"
+                      >
+                        後で確認
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+              </>
             ) : (
               <>
                 <div className="mt-4">
