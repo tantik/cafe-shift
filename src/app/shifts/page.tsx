@@ -72,6 +72,7 @@ const defaultReportDate = addDays(baseWeekStart, 14);
 const weekdays = ["月", "火", "水", "木", "金", "土", "日"];
 const attendanceStorageKeyPrefix = "cafe-shift-attendance";
 const correctionRequestsStorageKeyPrefix = "cafe-shift-attendance-correction-requests";
+const transportationStorageKeyPrefix = "cafe-shift-transportation";
 const breakMinuteOptions = ["0", "30", "45", "60", "90"];
 
 const employees: Employee[] = [
@@ -288,10 +289,8 @@ function getCorrectionRequestsStorageKey(employeeName: string) {
   return `${correctionRequestsStorageKeyPrefix}:${employeeName}`;
 }
 
-function getNearestBreakOption(minutes: number) {
-  return breakMinuteOptions.reduce((nearest, option) =>
-    Math.abs(Number(option) - minutes) < Math.abs(Number(nearest) - minutes) ? option : nearest,
-  );
+function getTransportationStorageKey(employeeName: string) {
+  return `${transportationStorageKeyPrefix}:${employeeName}`;
 }
 
 export default function ShiftsPage() {
@@ -307,9 +306,6 @@ function ShiftsContent() {
   const [weekOffset, setWeekOffset] = useState(2);
   const [todayKey, setTodayKey] = useState<string | null>(null);
   const [reportDate, setReportDate] = useState(defaultReportDate);
-  const [reportStartTime, setReportStartTime] = useState("08:30");
-  const [reportEndTime, setReportEndTime] = useState("13:00");
-  const [reportBreakMinutes, setReportBreakMinutes] = useState("30");
   const [reportTransportation, setReportTransportation] = useState("");
   const [reportMessage, setReportMessage] = useState("");
   const [reportError, setReportError] = useState("");
@@ -367,6 +363,21 @@ function ShiftsContent() {
     return () => window.clearTimeout(timer);
   }, [todayKey]);
 
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const storedTransportation = window.localStorage.getItem(getTransportationStorageKey(currentDemoEmployee.name));
+      if (storedTransportation !== null) {
+        setReportTransportation(storedTransportation);
+      }
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  function updateReportTransportation(value: string) {
+    setReportTransportation(value);
+    window.localStorage.setItem(getTransportationStorageKey(currentDemoEmployee.name), value);
+  }
+
   function saveAttendanceRecord(nextRecord: AttendanceRecord) {
     setAttendanceRecord(nextRecord);
     window.localStorage.setItem(getAttendanceStorageKey(nextRecord.employeeName, nextRecord.date), JSON.stringify(nextRecord));
@@ -423,12 +434,8 @@ function ShiftsContent() {
       status: "finished" as const,
       clockOutAt: getCurrentIso(),
     };
-    const breakMinutes = calculateBreakMinutes(nextRecord.breakSessions);
     saveAttendanceRecord(nextRecord);
     setReportDate(todayKey);
-    setReportStartTime(formatTime(nextRecord.clockInAt));
-    setReportEndTime(formatTime(nextRecord.clockOutAt));
-    setReportBreakMinutes(breakMinuteOptions.includes(String(breakMinutes)) ? String(breakMinutes) : getNearestBreakOption(breakMinutes));
   }
 
   function openCorrectionModal() {
@@ -476,13 +483,7 @@ function ShiftsContent() {
     setReportError("");
     setReportSuccess("");
 
-    if (
-      !reportDate ||
-      !reportStartTime ||
-      !reportEndTime ||
-      !reportBreakMinutes ||
-      reportTransportation.trim() === ""
-    ) {
+    if (!reportDate || reportTransportation.trim() === "") {
       setReportError(t("shifts.dailyReportRequiredError"));
       return;
     }
@@ -714,64 +715,31 @@ function ShiftsContent() {
             </label>
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
-            <label className="block min-w-0 text-xs font-semibold text-slate-700">
-              {t("shifts.reportStartTime")}
-              <span className="ml-1 text-[10px] font-medium text-slate-400">{t("shifts.reportOneMinuteOk")}</span>
-              <input
-                type="time"
-                step="60"
-                value={reportStartTime}
-                onChange={(event) => setReportStartTime(event.target.value)}
-                className="mt-1 h-9 w-full min-w-0 rounded-lg border border-slate-200 px-2 text-sm text-slate-900"
-              />
-            </label>
-
-            <label className="block min-w-0 text-xs font-semibold text-slate-700">
-              {t("shifts.reportEndTime")}
-              <span className="ml-1 text-[10px] font-medium text-slate-400">{t("shifts.reportOneMinuteOk")}</span>
-              <input
-                type="time"
-                step="60"
-                value={reportEndTime}
-                onChange={(event) => setReportEndTime(event.target.value)}
-                className="mt-1 h-9 w-full min-w-0 rounded-lg border border-slate-200 px-2 text-sm text-slate-900"
-              />
-            </label>
-          </div>
-
           <div className="space-y-2">
-            <div className="min-w-0">
-              <p className="text-xs font-semibold text-slate-700">{t("shifts.reportBreakTime")}</p>
-              <div className="mt-1 grid grid-cols-5 gap-1">
-                {breakMinuteOptions.map((minutes) => (
-                  <button
-                    key={minutes}
-                    type="button"
-                    onClick={() => setReportBreakMinutes(minutes)}
-                    className={`h-9 rounded-lg border text-xs font-bold ${
-                      reportBreakMinutes === minutes
-                        ? "border-emerald-600 bg-emerald-50 text-emerald-800"
-                        : "border-slate-200 bg-white text-slate-600"
-                    }`}
-                  >
-                    {minutes}
-                    {t("shifts.reportMinutes")}
-                  </button>
-                ))}
-              </div>
-              <label className="mt-1 flex h-9 items-center rounded-lg border border-slate-200 bg-white px-2">
-                <input
-                  type="number"
-                  min="0"
-                  value={reportBreakMinutes}
-                  onChange={(event) => setReportBreakMinutes(event.target.value)}
-                  className="min-w-0 flex-1 text-sm text-slate-900 outline-none"
-                />
-                <span className="text-xs font-semibold text-slate-500">{t("shifts.reportMinutes")}</span>
-              </label>
-              {attendanceRecord?.status === "finished" && Number(reportBreakMinutes) !== attendanceBreakMinutes ? (
-                <p className="mt-1 text-[11px] font-semibold text-slate-500">打刻から計算: {attendanceBreakMinutes}分</p>
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-2.5">
+              <p className="text-xs font-bold text-slate-700">勤務記録</p>
+              <dl className="mt-2 grid grid-cols-2 gap-2 text-sm">
+                <div>
+                  <dt className="text-[11px] font-bold text-slate-500">出勤</dt>
+                  <dd className="font-bold text-slate-950">{formatTime(attendanceRecord?.clockInAt)}</dd>
+                </div>
+                <div>
+                  <dt className="text-[11px] font-bold text-slate-500">休憩</dt>
+                  <dd className="font-bold text-slate-950">{attendanceBreakMinutes > 0 ? `${attendanceBreakMinutes}分` : "-"}</dd>
+                </div>
+                <div>
+                  <dt className="text-[11px] font-bold text-slate-500">退勤</dt>
+                  <dd className="font-bold text-slate-950">{formatTime(attendanceRecord?.clockOutAt)}</dd>
+                </div>
+                <div>
+                  <dt className="text-[11px] font-bold text-slate-500">実働</dt>
+                  <dd className="font-bold text-slate-950">{attendanceActualMinutes > 0 ? formatDuration(attendanceActualMinutes) : "-"}</dd>
+                </div>
+              </dl>
+              {attendanceRecord?.status !== "finished" ? (
+                <p className="mt-2 rounded-md bg-amber-50 px-2 py-1.5 text-[11px] font-semibold text-amber-800">
+                  退勤後に勤務記録が自動で反映されます
+                </p>
               ) : null}
             </div>
 
@@ -782,7 +750,7 @@ function ShiftsContent() {
                   type="number"
                   min="0"
                   value={reportTransportation}
-                  onChange={(event) => setReportTransportation(event.target.value)}
+                  onChange={(event) => updateReportTransportation(event.target.value)}
                   placeholder={t("shifts.reportTransportationPlaceholder")}
                   className="min-w-0 flex-1 text-sm text-slate-900 outline-none"
                 />

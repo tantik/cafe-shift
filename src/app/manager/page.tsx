@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState, type WheelEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type WheelEvent } from "react";
 import AppShell from "@/components/app-shell";
 import { demoEmployees } from "@/lib/demo-employees";
 import { useI18n } from "@/lib/i18n/use-i18n";
@@ -29,7 +29,21 @@ type SelectedCell = {
   dayKey: string;
 };
 
+type AttendanceCorrectionRequest = {
+  id: string;
+  employeeName: string;
+  date: string;
+  requestedStartTime: string;
+  requestedEndTime: string;
+  requestedBreakMinutes: number;
+  message: string;
+  createdAt: string;
+  status: "pending" | "approved";
+};
+
 const todayKey = "2026-06-19";
+const monthlyReportMonth = "2026-06";
+const correctionRequestsStorageKeyPrefix = "cafe-shift-attendance-correction-requests";
 
 const employees = demoEmployees;
 
@@ -138,6 +152,10 @@ function reportKey(employeeId: string, dayKey: string) {
   return `${employeeId}:${dayKey}`;
 }
 
+function getCorrectionRequestsStorageKey(employeeName: string) {
+  return `${correctionRequestsStorageKeyPrefix}:${employeeName}`;
+}
+
 function minutesFromTime(time: string) {
   const [hours, minutes] = time.split(":").map(Number);
   return hours * 60 + minutes;
@@ -152,6 +170,11 @@ function formatHours(hours: number) {
     return "-";
   }
   return `${Number.isInteger(hours) ? hours : hours.toFixed(1)}h`;
+}
+
+function csvValue(value: string | number) {
+  const text = String(value);
+  return `"${text.replaceAll('"', '""')}"`;
 }
 
 // Demo auto-generation. Production should consider staffing rules, max hours, vacations, fairness, and required headcount.
@@ -176,8 +199,6 @@ function buildDraftFromRequests(current: Record<string, Record<string, ShiftCode
   return next;
 }
 
-const reportByCell = Object.fromEntries(reports.map((report) => [reportKey(report.employeeId, report.workDate), report]));
-
 const missingRequestEmployeeIds = ["cons", "maria"];
 
 export default function ManagerPage() {
@@ -195,16 +216,34 @@ function ManagerContent() {
   const [selectedCell, setSelectedCell] = useState<SelectedCell | null>(null);
   const [draftShift, setDraftShift] = useState<ShiftCode>("none");
   const [success, setSuccess] = useState("");
+  const [correctionRequests, setCorrectionRequests] = useState<AttendanceCorrectionRequest[]>([]);
+  const [approvedCorrectionReports, setApprovedCorrectionReports] = useState<Record<string, WorkReport>>({});
   const [isDraftGenerated, setIsDraftGenerated] = useState(false);
   const [isMissingRequestsOpen, setIsMissingRequestsOpen] = useState(false);
   const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
   const wheelLockRef = useRef(false);
   const selectedWeek = weeks[selectedWeekIndex];
   const currentWeekIndex = weeks.findIndex((week) => week.days.some((day) => day.key === todayKey));
+  const reportByCell = useMemo(() => {
+    const entries = reports.map((report) => [reportKey(report.employeeId, report.workDate), report] as const);
+    for (const [key, report] of Object.entries(approvedCorrectionReports)) {
+      entries.push([key, report]);
+    }
+    return Object.fromEntries(entries) as Record<string, WorkReport>;
+  }, [approvedCorrectionReports]);
+  const monthlyReports = useMemo(
+    () => Object.values(reportByCell).filter((report) => report.workDate.startsWith(monthlyReportMonth)),
+    [reportByCell],
+  );
+  const pendingCorrections = correctionRequests.filter((request) => request.status === "pending");
 
   const selectedEmployee = selectedCell ? employees.find((employee) => employee.id === selectedCell.employeeId) : undefined;
   const selectedDay = selectedCell ? selectedWeek.days.find((day) => day.key === selectedCell.dayKey) : undefined;
   const selectedReport = selectedCell ? reportByCell[reportKey(selectedCell.employeeId, selectedCell.dayKey)] : undefined;
+  const selectedCorrection =
+    selectedCell && selectedEmployee
+      ? pendingCorrections.find((request) => request.employeeName === selectedEmployee.name && request.date === selectedCell.dayKey)
+      : undefined;
   const selectedIsPast = selectedCell ? selectedCell.dayKey < todayKey : false;
   const selectedIsReportOnly = selectedIsPast || Boolean(selectedReport);
   const missingRequestEmployees = employees.filter((employee) => missingRequestEmployeeIds.includes(employee.id));
@@ -216,13 +255,34 @@ function ManagerContent() {
       employees.map((employee) => {
         const weekShifts = selectedWeek.days.map((day) => schedule[employee.id][day.key] ?? "none");
         const planned = weekShifts.reduce((total, shift) => total + shiftMeta[shift].hours, 0);
-        const actual = reports
+        const actual = monthlyReports
           .filter((report) => report.employeeId === employee.id && report.workDate.startsWith("2026-06"))
           .reduce((total, report) => total + reportHours(report), 0);
         return { employee, weekShifts, planned, actual };
       }),
-    [schedule, selectedWeek],
+    [monthlyReports, schedule, selectedWeek],
   );
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const nextRequests: AttendanceCorrectionRequest[] = [];
+      // Demo only. In production correction requests will be stored in database.
+      for (const employee of employees) {
+        const storedRequests = window.localStorage.getItem(getCorrectionRequestsStorageKey(employee.name));
+        if (!storedRequests) {
+          continue;
+        }
+        try {
+          const parsed = JSON.parse(storedRequests) as AttendanceCorrectionRequest[];
+          nextRequests.push(...parsed);
+        } catch {
+          // Ignore malformed demo localStorage data.
+        }
+      }
+      setCorrectionRequests(nextRequests);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   function openCell(employeeId: string, dayKey: string) {
     setSelectedCell({ employeeId, dayKey });
@@ -241,6 +301,62 @@ function ManagerContent() {
       },
     }));
     setSelectedCell(null);
+  }
+
+  function approveCorrectionRequest(request: AttendanceCorrectionRequest) {
+    const employee = employees.find((currentEmployee) => currentEmployee.name === request.employeeName);
+    if (!employee) {
+      return;
+    }
+    const storageKey = getCorrectionRequestsStorageKey(request.employeeName);
+    const nextRequests = correctionRequests.map((currentRequest) =>
+      currentRequest.id === request.id ? { ...currentRequest, status: "approved" as const } : currentRequest,
+    );
+    setCorrectionRequests(nextRequests);
+    window.localStorage.setItem(
+      storageKey,
+      JSON.stringify(nextRequests.filter((currentRequest) => currentRequest.employeeName === request.employeeName)),
+    );
+    setApprovedCorrectionReports((current) => ({
+      ...current,
+      [reportKey(employee.id, request.date)]: {
+        employeeId: employee.id,
+        workDate: request.date,
+        startedAt: request.requestedStartTime,
+        endedAt: request.requestedEndTime,
+        breakMinutes: request.requestedBreakMinutes,
+        transportationCost: selectedReport?.transportationCost ?? 0,
+        message: request.message,
+      },
+    }));
+    setSuccess("修正依頼を承認しました");
+  }
+
+  function downloadMonthlyReportCsv() {
+    const header = ["名前", "勤務時間", "交通費", "時給", "給与", "合計"];
+    const rows = employees.map((employee) => {
+      const employeeReports = monthlyReports.filter((report) => report.employeeId === employee.id);
+      const hours = employeeReports.reduce((total, report) => total + reportHours(report), 0);
+      const transportation = employeeReports.reduce((total, report) => total + report.transportationCost, 0);
+      const salary = Math.round(hours * employee.hourlyWage);
+      const total = salary + transportation;
+      return [
+        employee.name,
+        Number.isInteger(hours) ? String(hours) : hours.toFixed(1),
+        transportation,
+        employee.hourlyWage,
+        salary,
+        total,
+      ];
+    });
+    const csv = `\uFEFF${[header, ...rows].map((row) => row.map(csvValue).join(",")).join("\n")}`;
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `cafe-shift-monthly-report-${monthlyReportMonth}.csv`;
+    link.click();
+    window.URL.revokeObjectURL(url);
   }
 
   function applyDraft(excludedEmployeeIds: string[] = []) {
@@ -347,6 +463,12 @@ function ManagerContent() {
         </div>
         {isDraftGenerated ? <p className="mt-2 inline-flex rounded-md bg-amber-50 px-2 py-1 text-xs font-bold text-amber-800">{t("manager.shiftDraft")}</p> : null}
         {success ? <p className="mt-2 rounded-lg bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800">{success}</p> : null}
+        {pendingCorrections.length > 0 ? (
+          <div className="mt-2 rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-sm text-orange-900">
+            <p className="font-bold">勤務時間の修正依頼があります</p>
+            <p className="mt-0.5 text-xs font-semibold">{pendingCorrections.length}件の修正依頼があります。確認してください。</p>
+          </div>
+        ) : null}
 
         <div
           className="mt-3 touch-pan-y"
@@ -396,6 +518,9 @@ function ManagerContent() {
                     const day = selectedWeek.days[index];
                     const meta = shiftMeta[shift];
                     const hasReport = Boolean(reportByCell[reportKey(row.employee.id, day.key)]);
+                    const hasPendingCorrection = pendingCorrections.some(
+                      (request) => request.employeeName === row.employee.name && request.date === day.key,
+                    );
                     return (
                       <td
                         key={`${row.employee.id}-${day.key}`}
@@ -406,12 +531,17 @@ function ManagerContent() {
                         <button
                           type="button"
                           onClick={() => openCell(row.employee.id, day.key)}
-                          className={`inline-flex h-7 w-full min-w-0 items-center justify-center rounded-md border px-0.5 text-[10px] font-bold ${meta.className} ${
+                          className={`relative inline-flex h-7 w-full min-w-0 items-center justify-center rounded-md border px-0.5 text-[10px] font-bold ${meta.className} ${
                             hasReport ? "ring-1 ring-emerald-500" : ""
                           }`}
                         >
                           <span>{meta.label}</span>
                           {meta.time ? <span className="ml-1 hidden truncate text-[9px] font-semibold xl:inline">{meta.time}</span> : null}
+                          {hasPendingCorrection ? (
+                            <span className="absolute right-0 top-0 rounded-full bg-orange-600 px-1 text-[8px] font-bold leading-3 text-white shadow-sm">
+                              !
+                            </span>
+                          ) : null}
                         </button>
                       </td>
                     );
@@ -427,11 +557,21 @@ function ManagerContent() {
             </tbody>
           </table>
         </div>
+        <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs font-semibold text-slate-500">デモ用の月次集計です。給与計算の正式書類ではありません。</p>
+          <button
+            type="button"
+            onClick={downloadMonthlyReportCsv}
+            className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-900 shadow-sm"
+          >
+            月間レポートCSV
+          </button>
+        </div>
       </section>
 
       {selectedCell && selectedEmployee && selectedDay ? (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/35 p-3 sm:items-center">
-          <section className="w-full max-w-md rounded-xl bg-white p-4 shadow-xl" role="dialog" aria-modal="true">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/35 p-3 sm:items-center" onClick={() => setSelectedCell(null)}>
+          <section className="w-full max-w-md rounded-xl bg-white p-4 shadow-xl" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h2 className="text-base font-bold text-slate-950">{selectedIsReportOnly ? t("manager.workReport") : t("manager.shiftEdit")}</h2>
@@ -447,6 +587,47 @@ function ManagerContent() {
             <p className="mt-4 text-xs font-bold text-slate-700">
               {t("manager.plannedShift")}: <span className="text-slate-950">{shiftMeta[schedule[selectedCell.employeeId][selectedCell.dayKey] ?? "none"].label}</span>
             </p>
+
+            {selectedCorrection ? (
+              <div className="mt-3 rounded-lg border border-orange-200 bg-orange-50 p-3 text-sm text-orange-950">
+                <h3 className="font-bold">勤務時間の修正依頼</h3>
+                <p className="mt-1 text-xs font-semibold">スタッフが勤務時間の修正を依頼しています。</p>
+                <dl className="mt-2 grid grid-cols-2 gap-2">
+                  <div>
+                    <dt className="text-[11px] font-bold text-orange-700">申請された出勤時間</dt>
+                    <dd className="font-bold">{selectedCorrection.requestedStartTime || "-"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-[11px] font-bold text-orange-700">申請された退勤時間</dt>
+                    <dd className="font-bold">{selectedCorrection.requestedEndTime || "-"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-[11px] font-bold text-orange-700">申請された休憩時間</dt>
+                    <dd className="font-bold">{selectedCorrection.requestedBreakMinutes}分</dd>
+                  </div>
+                  <div className="col-span-2">
+                    <dt className="text-[11px] font-bold text-orange-700">理由</dt>
+                    <dd className="font-semibold">{selectedCorrection.message || "-"}</dd>
+                  </div>
+                </dl>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => approveCorrectionRequest(selectedCorrection)}
+                    className="rounded-lg bg-orange-700 px-3 py-2 text-sm font-bold text-white"
+                  >
+                    承認する
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedCell(null)}
+                    className="rounded-lg border border-orange-200 bg-white px-3 py-2 text-sm font-bold text-orange-800"
+                  >
+                    後で確認
+                  </button>
+                </div>
+              </div>
+            ) : null}
 
             {selectedIsReportOnly ? (
               <div className="mt-3 rounded-lg bg-slate-50 p-3">
@@ -493,8 +674,8 @@ function ManagerContent() {
       ) : null}
 
       {isMissingRequestsOpen ? (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/35 p-3 sm:items-center">
-          <section className="w-full max-w-md rounded-xl bg-white p-4 shadow-xl" role="dialog" aria-modal="true">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/35 p-3 sm:items-center" onClick={() => setIsMissingRequestsOpen(false)}>
+          <section className="w-full max-w-md rounded-xl bg-white p-4 shadow-xl" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
             <h2 className="text-base font-bold text-slate-950">{t("manager.missingRequestsTitle")}</h2>
             <p className="mt-2 text-sm text-slate-600">{t("manager.missingRequestsMessage")}</p>
             <ul className="mt-3 space-y-1">

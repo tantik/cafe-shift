@@ -16,6 +16,7 @@ type Employee = {
   lineUserId: string;
   active: boolean;
   memo: string;
+  hourlyWage: number;
 };
 
 type EmployeeDraft = Omit<Employee, "id">;
@@ -29,6 +30,7 @@ const initialEmployees: Employee[] = demoEmployees.map((employee, index) => ({
   active: employee.active,
   lineUserId: employee.lineUserId,
   memo: employee.memo,
+  hourlyWage: employee.hourlyWage,
 }));
 
 const emptyDraft: EmployeeDraft = {
@@ -39,6 +41,7 @@ const emptyDraft: EmployeeDraft = {
   lineUserId: "",
   active: true,
   memo: "",
+  hourlyWage: 1200,
 };
 
 const filters: { id: EmployeeFilter; labelKey: string }[] = [
@@ -96,6 +99,7 @@ function ManagerEmployeesContent() {
       lineUserId: employee.lineUserId,
       active: employee.active,
       memo: employee.memo,
+      hourlyWage: employee.hourlyWage,
     });
     setIsEditorOpen(true);
   }
@@ -203,6 +207,9 @@ function ManagerEmployeesContent() {
                         >
                           {employee.lineUserId ? t("managerEmployees.line.linked") : t("managerEmployees.line.unlinked")}
                         </span>
+                        <span className="rounded-full bg-white px-2 py-0.5 text-[11px] font-semibold text-slate-700">
+                          時給 ¥{employee.hourlyWage.toLocaleString("ja-JP")}
+                        </span>
                       </div>
                       {employee.memo ? <p className="mt-0.5 truncate text-xs text-slate-500">{t("managerEmployees.memo")}: {employee.memo}</p> : null}
                     </div>
@@ -279,6 +286,16 @@ function ManagerEmployeesContent() {
                 <input
                   value={draft.initials}
                   onChange={(event) => updateDraft("initials", event.target.value)}
+                  className="mt-1 block w-full rounded-lg border border-slate-200 px-3 py-2 font-normal outline-none focus:border-emerald-500"
+                />
+              </label>
+              <label className="text-sm font-semibold text-slate-700">
+                時給
+                <input
+                  type="number"
+                  min="0"
+                  value={draft.hourlyWage}
+                  onChange={(event) => updateDraft("hourlyWage", Number(event.target.value))}
                   className="mt-1 block w-full rounded-lg border border-slate-200 px-3 py-2 font-normal outline-none focus:border-emerald-500"
                 />
               </label>
