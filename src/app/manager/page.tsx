@@ -201,6 +201,20 @@ function buildDraftFromRequests(current: Record<string, Record<string, ShiftCode
 
 const missingRequestEmployeeIds = ["cons", "maria"];
 
+const demoCorrectionRequests: AttendanceCorrectionRequest[] = [
+  {
+    id: "demo-correction-cons-2026-06-18",
+    employeeName: "Cons",
+    date: "2026-06-18",
+    requestedStartTime: "08:30",
+    requestedEndTime: "10:05",
+    requestedBreakMinutes: 0,
+    message: "退勤打刻を忘れたため、勤務時間の確認をお願いします。",
+    createdAt: "2026-06-18T10:20:00+09:00",
+    status: "pending",
+  },
+];
+
 export default function ManagerPage() {
   return (
     <AppShell variant="wide" showMobileNav={false}>
@@ -245,7 +259,7 @@ function ManagerContent() {
       ? pendingCorrections.find((request) => request.employeeName === selectedEmployee.name && request.date === selectedCell.dayKey)
       : undefined;
   const selectedIsPast = selectedCell ? selectedCell.dayKey < todayKey : false;
-  const selectedIsReportOnly = selectedIsPast || Boolean(selectedReport);
+  const selectedIsReportOnly = selectedIsPast || Boolean(selectedReport) || Boolean(selectedCorrection);
   const missingRequestEmployees = employees.filter((employee) => missingRequestEmployeeIds.includes(employee.id));
   const selectedEditableShiftCodes =
     selectedEmployee?.id === "cons" ? editableShiftCodes : editableShiftCodes.filter((code) => code !== "shift_3");
@@ -279,7 +293,7 @@ function ManagerContent() {
           // Ignore malformed demo localStorage data.
         }
       }
-      setCorrectionRequests(nextRequests);
+      setCorrectionRequests(nextRequests.length > 0 ? nextRequests : demoCorrectionRequests);
     }, 0);
     return () => window.clearTimeout(timer);
   }, []);
